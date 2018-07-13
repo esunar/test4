@@ -1,0 +1,5 @@
+subordinates:
+  telegraf:
+    where: all
+  landscape-client:
+    where: all
