@@ -1,4 +1,6 @@
-= Juju Lint
+= Juju Lint =
+
+/!\ This is alpha software and backwards incompatible changes are expected.
 
 == Introduction ==
 
