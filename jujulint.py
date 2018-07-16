@@ -80,8 +80,8 @@ def flatten_list(l):
     return t
 
 
-def read_rules(filename, options):
-    with open(filename, 'r') as yaml_file:
+def read_rules(options):
+    with open(options.config, 'r') as yaml_file:
         lint_rules = yaml.safe_load(yaml_file)
     if options.override:
         for override in options.override.split("#"):
@@ -289,6 +289,8 @@ def init():
     usage = """usage: %prog [OPTIONS]
     Sanity check a Juju model"""
     parser = optparse.OptionParser(usage)
+    parser.add_option("-c", "--config", default="lint-rules.yaml",
+                      help="File to read lint rules from. Defaults to `lint-rules.yaml`")
     parser.add_option("-o", "--override-subordinate",
                       dest="override",
                       help="override lint-rules.yaml, e.g. -o canonical-livepatch:all")
@@ -304,7 +306,7 @@ def init():
 def main():
     (options, args) = init()
     setup_logging(options.loglevel, options.logfile)
-    lint_rules = read_rules("lint-rules.yaml", options)
+    lint_rules = read_rules(options)
     for filename in args:
         lint(filename, lint_rules)
 
