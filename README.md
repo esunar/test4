@@ -7,13 +7,13 @@ generated as follows:
 
     juju status --format json > status.json
 
-Then run `jujulint.py` (using a rules file of `lint-rules.yaml`):
+Then run `juju-lint` (using a rules file of `lint-rules.yaml`):
 
-    ./jujulint.py status.json
+    ./juju-lint status.json
 
 To use a different rules file:
 
-    ./jujulint.py -c my-rules.yaml status.json
+    ./juju-lint -c my-rules.yaml status.json
 
 == Rules File ==
 
