@@ -1,0 +1,24 @@
+name: juju-lint
+version: auto
+summary: Linter for Juju models to compare deployments with configurable policy
+description: Linter for Juju models to compare deployments with configurable policy
+grade: stable
+confinement: classic
+version-script: |
+  git describe --dirty --always --tags | sed -r 's/v(.*)/\1/g'
+apps:
+  juju-lint:
+    command: usr/bin/python3 $SNAP/bin/juju-lint
+    environment:
+      PATH: "/snap/juju-lint/current/bin:/snap/juju-lint/current/usr/bin:/bin:/usr/bin:"
+parts:
+  juju-lint:
+    plugin: python
+    python-version: python3
+    python-packages:
+      - attrs
+      - pyyaml
+    stage-packages:
+      - libc6
+    source: .
+    source-type: git
