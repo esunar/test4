@@ -1,2 +1,4 @@
 .tox/
 juju_lint.egg-info/
+debian/files
+*~
