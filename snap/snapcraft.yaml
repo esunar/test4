@@ -16,9 +16,9 @@ parts:
     plugin: python
     python-version: python3
     python-packages:
-      - attrs
-      - pyyaml
+      - 3rdparty/attrs-18.1.0.tar.gz
     stage-packages:
       - libc6
+      - python3-yaml
     source: .
     source-type: git
