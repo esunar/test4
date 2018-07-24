@@ -1,0 +1,2 @@
+# Additional files to include in any distutils source packages.
+include debian/changelog  # required by setup.py

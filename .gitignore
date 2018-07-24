@@ -1,2 +1,16 @@
+*~
+
+# distutils cruft
 .tox/
 juju_lint.egg-info/
+dist/
+
+# debuild cruft
+debian/files
+
+# snapcraft cruft
+*.snap
+parts/
+prime/
+snap/.snapcraft/
+stage/

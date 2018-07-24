@@ -1,0 +1,5 @@
+juju-lint (1.0.0.dev1) xenial; urgency=medium
+
+  * Initial release.
+
+ -- Stuart Bishop (Work) <stuart.bishop@canonical.com>  Tue, 24 Jul 2018 17:36:40 +0700
