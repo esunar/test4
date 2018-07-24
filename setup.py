@@ -1,11 +1,18 @@
+import re
 import setuptools
+import warnings
+
+warnings.simplefilter("ignore", UserWarning)  # Older pips complain about newer options.
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open("debian/changelog", "r") as fh:
+    version = re.search(r'\((.*)\)', fh.readline()).group(1)
+
 setuptools.setup(
     name="juju-lint",
-    version="1.0.0.dev1",
+    version=version,
     author="Canonical",
     author_email="juju@lists.ubuntu.com",
     description="Linter for Juju models to compare deployments with configurable policy",
