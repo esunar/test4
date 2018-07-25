@@ -4,12 +4,8 @@ Priority: extra
 Maintainer: Juju Linters <juju@lists.ubuntu.com>
 Build-Depends:
  debhelper,
- python-all (>= 2.6.6-3~),
- python-setuptools,
- python-yaml,
  python3-all,
- python3-setuptools,
- python3-yaml
+ python3-setuptools
 Standards-Version: 3.9.3
 X-Python-Version: >= 3.4
 
@@ -18,5 +14,6 @@ Architecture: all
 Depends:
  ${python3:Depends},
  ${misc:Depends},
- python3-yaml
+ python3-yaml,
+ python3-attr (>= 18.1)
 Description: Linter for Juju models to compare deployments with configurable policy
