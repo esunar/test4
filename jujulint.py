@@ -203,10 +203,10 @@ def check_subs(model, lint_rules):
                 for app in model.apps_on_machines[machine]:
                     model.missing_subs[required_sub].add(app)
 
-    for sub in model.missing_subs.keys()[:]:
+    for sub in list(model.missing_subs.keys()):
         if not model.missing_subs[sub]:
             del model.missing_subs[sub]
-    for sub in model.extraneous_subs.keys()[:]:
+    for sub in list(model.extraneous_subs.keys()):
         if not model.extraneous_subs[sub]:
             del model.extraneous_subs[sub]
 
