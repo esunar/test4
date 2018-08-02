@@ -1,0 +1,105 @@
+subordinates:
+ telegraf:
+  where: all
+ landscape-client:
+  where: all
+ filebeat:
+  where: all
+ canonical-livepatch:
+  where: host only
+ nrpe:
+  where: container aware
+  host-suffixes: [host, physical]
+  container-suffixes: [lxd, container]
+ ntp:
+  where: host only # You don't want NTP in a container duelling with ntp in the host
+ thruk-agent:
+  where: on nagios
+ prometheus-ceph-exporter:
+  where: on ceph-mon
+
+operations mandatory: &operations-mandatory-charms
+ - elasticsearch
+ - grafana
+ - graylog
+ - landscape-server
+ - nagios
+ - openstack-service-checks
+ - prometheus
+ - prometheus-openstack-exporter
+
+operations mandatory dependencies: &operations-mandatory-deps
+ - postgresql
+
+operations subordinates: &operations-mandatory-subs
+ - canonical-livepatch
+ - filebeat
+ - ksplice
+ - landscape-client
+ - lldpd
+ - nrpe
+ - ntp
+ - prometheus-ceph-exporter
+ - telegraf
+ - thruk-agent
+
+operations charms: &operations-charms
+ - *operations-mandatory-charms
+ - *operations-mandatory-deps
+ - *operations-mandatory-subs
+
+openstack mandatory: &openstack-mandatory-charms
+ - ceilometer
+ - ceilometer-agent
+ - ceph-mon
+ - ceph-osd
+ - cinder
+ - cinder-backup
+ - cinder-ceph
+ - glance
+ - heat
+ - keystone
+ - neutron-api
+ - neutron-openvswitch
+ - nova-cloud-controller
+ - nova-compute
+ - openstack-dashboard
+
+openstack mandatory deps: &openstack-mandatory-deps
+ - haproxy
+ - memcached
+ - percona-cluster
+ - rabbitmq-server
+
+openstack mandatory subordinates: &openstack-mandatory-subs
+ - hacluster
+
+openstack optional charms: &openstack-optional-charms
+ - aodh
+ - ceph-radosgw
+ - designate
+ - designate-bind
+ - glance-simplestreams-sync
+ - glance-sync-slave
+ - gnocchi
+ - keystone-ldap
+ - mongodb # Optional since Gnochii
+ - neutron-gateway
+ - swift-proxy
+ - swift-storage
+
+cisco-aci-charms: &cisco-aci-charms
+ - neutron-api-plugin-aci
+ - openstack-dashboard-plugin-gbp
+
+openstack charms: &openstack-charms
+ - *openstack-mandatory-charms
+ - *openstack-mandatory-deps
+ - *openstack-mandatory-subs
+ - *openstack-optional-charms
+ - *cisco-aci-charms
+
+known charms:
+ - ubuntu
+ - *openstack-charms
+ - *operations-charms

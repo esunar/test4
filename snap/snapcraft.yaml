@@ -22,3 +22,6 @@ parts:
       - python3-yaml
     source: .
     source-type: git
+    install: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/juju-lint/
+      cp -r contrib $SNAPCRAFT_PART_INSTALL/usr/share/juju-lint/
