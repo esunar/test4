@@ -1,3 +1,9 @@
+juju-lint (1.0.0.dev2) xenial; urgency=medium
+
+  * Add canonical-openstack-rules.yaml in contrib directory.
+
+ -- Tom Haddon <tom.haddon@canonical.com>  Thu, 02 Aug 2018 18:08:27 +0100
+
 juju-lint (1.0.0.dev1) xenial; urgency=medium
 
   * Initial release.
