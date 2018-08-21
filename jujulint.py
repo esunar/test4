@@ -15,7 +15,6 @@ import attr
 
 # TODO:
 #  - tests
-#  - prometheus vs prometheus2
 #  - non-OK statuses?
 #  - missing relations for mandatory subordinates
 #  - info mode, e.g. num of machines, version (e.g. look at ceph), architecture
@@ -141,14 +140,21 @@ def check_subs(model, lint_rules):
         for machine in model.subs_on_machines:
             logging.debug("Checking on %s" % (machine))
             present_subs = model.subs_on_machines[machine]
-            if where.startswith("on "):  # only on specific machines
+            apps = model.apps_on_machines[machine]
+            if where.startswith("on "):  # only on specific apps
                 logging.debug("requirement is = form...")
                 required_on = where[3:]
-                machine_name = machine.split("/")[0]
-                if machine_name != required_on:
+                if required_on not in apps:
                     logging.debug("... NOT matched")
                     continue
                 logging.debug("... matched")
+            # TODO this needs to be not just one app, but a list
+            elif where.startswith("all except "):  # not next to this app
+                logging.debug("requirement is != form...")
+                not_on = where[11:]
+                if not_on in apps:
+                    logging.debug("... matched, not wanted on this host")
+                    continue
             elif where == "host only":
                 logging.debug("requirement is 'host only' form....")
                 if is_container(machine):
