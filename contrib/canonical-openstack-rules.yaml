@@ -1,22 +1,21 @@
 subordinates:
  telegraf:
-  where: all
+  where: all except prometheus  # and prometheus-ceph-exporter and prometheus-openstack-exporter
+  host-suffixes: [prometheus]
  landscape-client:
-  where: all
+  where: all except landscape-server
  filebeat:
-  where: all
+  where: all except graylog
  canonical-livepatch:
   where: host only
  nrpe:
-  where: container aware
+  where: container aware  # and except nagios
   host-suffixes: [host, physical]
   container-suffixes: [lxd, container]
  ntp:
   where: host only # You don't want NTP in a container duelling with ntp in the host
  thruk-agent:
   where: on nagios
- prometheus-ceph-exporter:
-  where: on ceph-mon
 
 operations mandatory: &operations-mandatory-charms
  - elasticsearch
@@ -25,8 +24,9 @@ operations mandatory: &operations-mandatory-charms
  - landscape-server
  - nagios
  - openstack-service-checks
- - prometheus
+ - prometheus2
  - prometheus-openstack-exporter
+ - prometheus-ceph-exporter
 
 operations mandatory dependencies: &operations-mandatory-deps
  - postgresql
@@ -39,7 +39,6 @@ operations subordinates: &operations-mandatory-subs
  - lldpd
  - nrpe
  - ntp
- - prometheus-ceph-exporter
  - telegraf
  - thruk-agent
 
@@ -54,7 +53,6 @@ openstack mandatory: &openstack-mandatory-charms
  - ceph-mon
  - ceph-osd
  - cinder
- - cinder-backup
  - cinder-ceph
  - glance
  - heat
@@ -87,6 +85,10 @@ openstack optional charms: &openstack-optional-charms
  - neutron-gateway
  - swift-proxy
  - swift-storage
+ - cinder-backup
+ - vault
+ - etcd
+ - easyrsa
 
 cisco-aci-charms: &cisco-aci-charms
  - neutron-api-plugin-aci
