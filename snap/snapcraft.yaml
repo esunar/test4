@@ -17,11 +17,15 @@ parts:
     python-version: python3
     python-packages:
       - 3rdparty/attrs-18.1.0.tar.gz
+    build-packages:
+      - python3-setuptools
     stage-packages:
       - libc6
       - python3-yaml
     source: .
     source-type: git
-    install: |
-      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/juju-lint/
-      cp -r contrib $SNAPCRAFT_PART_INSTALL/usr/share/juju-lint/
+  juju-lint-contrib:
+    plugin: dump
+    source: .
+    prime:
+      - contrib
