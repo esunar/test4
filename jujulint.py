@@ -265,6 +265,64 @@ def map_charms(applications, model):
         model.app_to_charm[app] = charm
 
 
+def check_status(what, status, expected):
+    if isinstance(expected, str):
+        expected = [expected]
+    if status.get("current") not in expected:
+        logging.error("%s has status '%s' (since: %s, message: %s); {We expected: %s}"
+                      % (what, status.get("current"), status.get("since"),
+                         status.get("message"), expected))
+
+
+def check_status_pair(name, status_type, data_d):
+    if status_type in ["machine", "container"]:
+        primary = "machine-status"
+        primary_expected = "running"
+        juju_expected = "started"
+    elif status_type in ["unit", "subordinate"]:
+        primary = "workload-status"
+        primary_expected = ["active", "unknown"]
+        juju_expected = "idle"
+    elif status_type in ["application"]:
+        primary = "application-status"
+        primary_expected = ["active", "unknown"]
+        juju_expected = None
+
+    check_status("%s %s" % (status_type.title(), name), data_d[primary],
+                 expected=primary_expected)
+    if juju_expected:
+        check_status("Juju on %s %s" % (status_type, name),
+                     data_d["juju-status"],
+                     expected=juju_expected)
+
+
+def check_statuses(juju_status, applications):
+    for machine_name in juju_status["machines"]:
+        check_status_pair(machine_name, "machine", juju_status["machines"][machine_name])
+        for container_name in juju_status["machines"][machine_name].get("container", []):
+            check_status_pair(container_name, "container",
+                              juju_status["machines"][machine_name][container_name])
+
+    for app_name in juju_status[applications]:
+        check_status_pair(app_name, "application",
+                          juju_status[applications][app_name])
+        for unit_name in juju_status[applications][app_name].get("units", []):
+            check_status_pair(unit_name, "unit",
+                              juju_status[applications][app_name]["units"][unit_name])
+            # This is noisy and only covers a very theoretical corner case
+            # where a misbehaving or malicious leader unit sets the
+            # application-status to OK despite one or more units being in error
+            # state.
+            #
+            # We could revisit this later by splitting it into two passes and
+            # only warning about individual subordinate units if the
+            # application-status for the subordinate claims to be OK.
+            #
+            # for subordinate_name in juju_status[applications][app_name]["units"][unit_name].get("subordinates", []):
+            #     check_status_pair(subordinate_name, "subordinate",
+            #                       juju_status[applications][app_name]["units"][unit_name]["subordinates"][subordinate_name])
+
+
 def lint(filename, lint_rules):
     model = ModelInfo()
 
@@ -285,6 +343,8 @@ def lint(filename, lint_rules):
 
     check_subs(model, lint_rules)
     check_charms(model, lint_rules)
+
+    check_statuses(j, applications)
 
     results(model)
 
