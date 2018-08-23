@@ -5,7 +5,7 @@ description: Linter for Juju models to compare deployments with configurable pol
 grade: stable
 confinement: classic
 version-script: |
-  echo `python3 setup.py -V`-`git describe --dirty --always --tags | sed -r 's/v(.*)/\1/g'`
+  echo `head -1 debian/changelog | sed -rn 's/.*\((.*)\).*/\1/p'`-`git describe --dirty --always --tags | sed -r 's/v(.*)/\1/g'`
 apps:
   juju-lint:
     command: usr/bin/python3 $SNAP/bin/juju-lint
