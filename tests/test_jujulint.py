@@ -11,3 +11,7 @@ class TestJujuLint(unittest.TestCase):
         unflattened_list = [1, [2, 3]]
         flattened_list = [1, 2, 3]
         self.assertEqual(flattened_list, jujulint.flatten_list(unflattened_list))
+
+        unflattened_list = [1, [2, [3, 4]]]
+        flattened_list = [1, 2, 3, 4]
+        self.assertEqual(flattened_list, jujulint.flatten_list(unflattened_list))
