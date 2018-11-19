@@ -343,7 +343,12 @@ def lint(filename, lint_rules):
     model = ModelInfo()
 
     with open(filename, 'r') as infile:
-        j = json.loads(infile.read())
+        try:
+            j = json.loads(infile.read())
+        except json.decoder.JSONDecodeError:
+            logging.debug("Attempting to load input file as yaml")
+            infile.seek(0)
+            j = yaml.load(infile)
 
     # Handle Juju 2 vs Juju 1
     applications = "applications"
@@ -360,7 +365,10 @@ def lint(filename, lint_rules):
     check_subs(model, lint_rules)
     check_charms(model, lint_rules)
 
-    check_statuses(j, applications)
+    try:
+        check_statuses(j, applications)
+    except KeyError:
+        logging.info("Not checking status, this is a bundle")
 
     results(model)
 
