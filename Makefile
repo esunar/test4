@@ -7,3 +7,6 @@ dch:
 
 deb-src:
 	debuild -S -sa -I.git -I.tox
+
+test:
+	python3 -m unittest discover tests
