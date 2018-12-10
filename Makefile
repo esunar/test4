@@ -1,5 +1,5 @@
 lint:
-	tox -e lint
+	tox -e py3-lint
 
 dch:
 	if ! which gbp > /dev/null; then sudo apt-get install -y git-buildpackage; fi
@@ -9,4 +9,4 @@ deb-src:
 	debuild -S -sa -I.git -I.tox
 
 test:
-	python3 -m unittest discover tests
+	tox -e py3-test
