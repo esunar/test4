@@ -18,7 +18,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import logging
 import optparse
 import pprint
@@ -343,12 +342,7 @@ def lint(filename, lint_rules):
     model = ModelInfo()
 
     with open(filename, 'r') as infile:
-        try:
-            j = json.loads(infile.read())
-        except json.decoder.JSONDecodeError:
-            logging.debug("Attempting to load input file as yaml")
-            infile.seek(0)
-            j = yaml.load(infile)
+        j = yaml.safe_load(infile.read())
 
     # Handle Juju 2 vs Juju 1
     applications = "applications"
@@ -365,9 +359,9 @@ def lint(filename, lint_rules):
     check_subs(model, lint_rules)
     check_charms(model, lint_rules)
 
-    try:
+    if j.get('machines'):
         check_statuses(j, applications)
-    except KeyError:
+    else:
         logging.info("Not checking status, this is a bundle")
 
     results(model)
