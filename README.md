@@ -17,12 +17,6 @@ To use a different rules file:
 
     ./juju-lint -c my-rules.yaml status.yaml
 
-Lint can also be run against a bundle file to check applications before
-deployment. This will not include application status and is included as a pre-check. 
-To run against a bundle:
-
-    ./juju-lint -c my-rules.yaml bundle.yaml
-
 == Rules File ==
 
 For an example of a rules file, see `example-lint-rules.yaml`.

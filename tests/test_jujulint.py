@@ -18,12 +18,12 @@ class TestJujuLint(unittest.TestCase):
 
     def test_map_charms(self):
         model = jujulint.ModelInfo()
-        applications = {'test-app-1': {'charm': "cs:~USER/SERIES/TEST-CHARM-123"},
-                        'test-app-2': {'charm': "cs:~USER/TEST-CHARM-123"},
-                        'test-app-3': {'charm': "cs:TEST-CHARM-123"},
-                        'test-app-4': {'charm': "local:SERIES/TEST-CHARM"},
-                        'test-app-5': {'charm': "local:./TEST-CHARM"},
+        applications = {'test-app-1': {'charm': "cs:~USER/SERIES/TEST-CHARM12-123"},
+                        'test-app-2': {'charm': "cs:~USER/TEST-CHARM12-123"},
+                        'test-app-3': {'charm': "cs:TEST-CHARM12-123"},
+                        'test-app-4': {'charm': "local:SERIES/TEST-CHARM12"},
+                        'test-app-5': {'charm': "local:TEST-CHARM12"},
                         }
         jujulint.map_charms(applications, model)
         for charm in model.charms:
-            self.assertEqual("TEST-CHARM", charm)
+            self.assertEqual("TEST-CHARM12", charm)
