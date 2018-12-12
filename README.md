@@ -4,18 +4,24 @@
 
 == Introduction ==
 
-This is intended to be run against a json dump of Juju status, which can be
+This is intended to be run against a yaml dump of Juju status, which can be
 generated as follows:
 
-    juju status --format json > status.json
+    juju status --format yaml > status.yaml
 
 Then run `juju-lint` (using a rules file of `lint-rules.yaml`):
 
-    ./juju-lint status.json
+    ./juju-lint status.yaml
 
 To use a different rules file:
 
-    ./juju-lint -c my-rules.yaml status.json
+    ./juju-lint -c my-rules.yaml status.yaml
+
+Lint can also be run against a bundle file to check applications before
+deployment. This will not include application status and is included as a pre-check. 
+To run against a bundle:
+
+    ./juju-lint -c my-rules.yaml bundle.yaml
 
 == Rules File ==
 
