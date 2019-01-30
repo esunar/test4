@@ -21,6 +21,7 @@
 import logging
 import optparse
 import pprint
+import re
 import sys
 
 import yaml
@@ -263,19 +264,9 @@ def results(model):
 
 def map_charms(applications, model):
     for app in applications:
-        # ### Charms
-        # ##
         charm = applications[app]["charm"]
-        # There are 4 forms:
-        # - cs:~USER/SERIES/CHARM-REV
-        # - cs:~USER/CHARM-REV
-        # - cs:CHARM-REV
-        # - local:SERIES/CHARM-REV
-        if ":" in charm:
-            charm = ":".join(charm.split(":")[1:])
-        if "/" in charm:
-            charm = charm.split("/")[-1]
-        charm = "-".join(charm.split("-")[:-1])
+        match = re.search(r'^(\w+:)?(~\w+/)?(\w+/)?([a-zA-Z0-9-]+?)(-\d+)?$', charm)
+        charm = match.group(4)
         model.charms.add(charm)
         model.app_to_charm[app] = charm
 
