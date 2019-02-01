@@ -265,8 +265,11 @@ def results(model):
 def map_charms(applications, model):
     for app in applications:
         charm = applications[app]["charm"]
-        match = re.search(r'^(\w+:)?(~\w+/)?(\w+/)?([a-zA-Z0-9-]+?)(-\d+)?$', charm)
-        charm = match.group(4)
+        match = re.search(r'^(\w+:)?(~[\w-]+/)?(\w+/)?([a-zA-Z0-9-]+?)(-\d+)?$', charm)
+        try:
+            charm = match.group(4)
+        except AttributeError:
+            raise Exception("Can not match charm name for: {}".format(charm))
         model.charms.add(charm)
         model.app_to_charm[app] = charm
 
