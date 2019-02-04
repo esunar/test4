@@ -29,6 +29,5 @@ class TestJujuLint(unittest.TestCase):
         for charm in model.charms:
             self.assertEqual("TEST-CHARM12", charm)
         applications = {'test-app1': {'charm': "cs:invalid-charm$"}, }
-        with self.assertRaises(Exception,
-                               msg="Can not match charm name for: cs:invalid-charm$"):
+        with self.assertRaises(jujulint.InvalidCharmNameError):
             jujulint.map_charms(applications, model)
