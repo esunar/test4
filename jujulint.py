@@ -36,6 +36,10 @@ import attr
 #  - info mode, e.g. num of machines, version (e.g. look at ceph), architecture
 
 
+class InvalidCharmNameError(Exception):
+    pass
+
+
 @attrs
 class ModelInfo(object):
     # Info obtained from juju status data
@@ -265,8 +269,10 @@ def results(model):
 def map_charms(applications, model):
     for app in applications:
         charm = applications[app]["charm"]
-        match = re.search(r'^(\w+:)?(~\w+/)?(\w+/)?([a-zA-Z0-9-]+?)(-\d+)?$', charm)
-        charm = match.group(4)
+        match = re.match(r'^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$', charm)
+        if not match:
+            raise InvalidCharmNameError("charm name '{}' is invalid".format(charm))
+        charm = match.group(1)
         model.charms.add(charm)
         model.app_to_charm[app] = charm
 

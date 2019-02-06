@@ -23,7 +23,11 @@ class TestJujuLint(unittest.TestCase):
                         'test-app-3': {'charm': "cs:TEST-CHARM12-123"},
                         'test-app-4': {'charm': "local:SERIES/TEST-CHARM12"},
                         'test-app-5': {'charm': "local:TEST-CHARM12"},
+                        'test-app-6': {'charm': "cs:~TEST-CHARMERS/TEST-CHARM12-123"},
                         }
         jujulint.map_charms(applications, model)
         for charm in model.charms:
             self.assertEqual("TEST-CHARM12", charm)
+        applications = {'test-app1': {'charm': "cs:invalid-charm$"}, }
+        with self.assertRaises(jujulint.InvalidCharmNameError):
+            jujulint.map_charms(applications, model)
