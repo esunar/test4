@@ -10,7 +10,7 @@ subordinates:
   where: host only
  nrpe:
   where: container aware  # and except nagios
-  host-suffixes: [host, physical]
+  host-suffixes: [host, physical, guest]
   container-suffixes: [lxd, container]
  ntp:
   where: host only # You don't want NTP in a container duelling with ntp in the host
