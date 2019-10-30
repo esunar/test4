@@ -3,7 +3,7 @@
 # This file is part of juju-lint, a tool for validating that Juju
 # deloyments meet configurable site policies.
 #
-# Copyright 2018 Canonical Limited.
+# Copyright 2018-2019 Canonical Limited.
 # License granted by Canonical Limited.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import collections
 import logging
 import optparse
 import pprint
@@ -47,11 +48,13 @@ class ModelInfo(object):
     app_to_charm = attrib(default=attr.Factory(dict))
     subs_on_machines = attrib(default=attr.Factory(dict))
     apps_on_machines = attrib(default=attr.Factory(dict))
+    machines_to_az = attrib(default=attr.Factory(dict))
 
     # Output of our linting
     missing_subs = attrib(default=attr.Factory(dict))
     extraneous_subs = attrib(default=attr.Factory(dict))
     duelling_subs = attrib(default=attr.Factory(dict))
+    az_unbalanced_apps = attrib(default=attr.Factory(dict))
 
 
 def fubar(msg, exit_code=1):
@@ -264,6 +267,12 @@ def results(model):
         logging.info("following subordinates where found on machines more than once:")
         for sub in model.duelling_subs:
             logging.error(" -> %s [%s]" % (sub, ", ".join(sorted(model.duelling_subs[sub]))))
+    if model.az_unbalanced_apps:
+        logging.error("The following apps are unbalanced across AZs: ")
+        for app in model.az_unbalanced_apps:
+            (num_units, az_counter) = model.az_unbalanced_apps[app]
+            az_map = ", ".join(["%s: %s" % (az, az_counter[az]) for az in az_counter])
+            logging.error(" -> %s: %s units, deployed as: %s" % (app, num_units, az_map))
 
 
 def map_charms(applications, model):
@@ -275,6 +284,23 @@ def map_charms(applications, model):
         charm = match.group(1)
         model.charms.add(charm)
         model.app_to_charm[app] = charm
+
+
+def map_machines_to_az(machines, model):
+    for machine in machines:
+        if "hardware" not in machines[machine]:
+            logging.error("I: Machine %s has no hardware info; skipping." % (machine))
+            continue
+
+        hardware = machines[machine]["hardware"]
+        for entry in hardware.split():
+            if entry.startswith("availability-zone="):
+                found_az = True
+                az = entry.split("=")[1]
+                model.machines_to_az[machine] = az
+        if not found_az:
+            logging.error("I: Machine %s has no availability-zone info in hardware field; skipping." % (machine))
+            continue
 
 
 def check_status(what, status, expected):
@@ -335,6 +361,36 @@ def check_statuses(juju_status, applications):
             #                       juju_status[applications][app_name]["units"][unit_name]["subordinates"][subordinate_name])
 
 
+def check_azs(applications, model):
+    # Figure out how many AZs we have
+    azs = set()
+    for machine in model.machines_to_az:
+        azs.add(model.machines_to_az[machine])
+    num_azs = len(azs)
+    if num_azs != 3:
+        logging.error("E: Found %s AZs (not 3); and I don't currently know how to lint that." % (num_azs))
+        return
+
+    for app_name in applications:
+        az_counter = collections.Counter()
+        num_units = len(applications[app_name].get("units", []))
+        if num_units <= 1:
+            continue
+        min_per_az = num_units // num_azs
+        max_per_az = min_per_az + (num_units % num_azs)
+        for unit in applications[app_name]["units"]:
+            machine = applications[app_name]["units"][unit]["machine"]
+            machine = machine.split("/")[0]
+            if machine not in model.machines_to_az:
+                logging.error("E: [%s] Can't find machine %s in machine to AZ mapping data" % (app_name, machine))
+                continue
+            az_counter[model.machines_to_az[machine]] += 1
+        for az in az_counter:
+            num_this_az = az_counter[az]
+            if num_this_az < min_per_az or num_this_az > max_per_az:
+                model.az_unbalanced_apps[app_name] = [num_units, az_counter]
+
+
 def lint(filename, lint_rules):
     model = ModelInfo()
 
@@ -352,6 +408,9 @@ def lint(filename, lint_rules):
     # Then map out subordinates to applications
     for app in j[applications]:
         process_subordinates(j[applications][app], app, model)
+
+    map_machines_to_az(j["machines"], model)
+    check_azs(j[applications], model)
 
     check_subs(model, lint_rules)
     check_charms(model, lint_rules)
