@@ -298,9 +298,9 @@ def map_machines_to_az(machines, model):
                 found_az = True
                 az = entry.split("=")[1]
                 model.machines_to_az[machine] = az
+                break
         if not found_az:
             logging.error("I: Machine %s has no availability-zone info in hardware field; skipping." % (machine))
-            continue
 
 
 def check_status(what, status, expected):
@@ -373,11 +373,12 @@ def check_azs(applications, model):
 
     for app_name in applications:
         az_counter = collections.Counter()
+        for az in azs:
+            az_counter[az] = 0
         num_units = len(applications[app_name].get("units", []))
         if num_units <= 1:
             continue
         min_per_az = num_units // num_azs
-        max_per_az = min_per_az + (num_units % num_azs)
         for unit in applications[app_name]["units"]:
             machine = applications[app_name]["units"][unit]["machine"]
             machine = machine.split("/")[0]
@@ -387,7 +388,7 @@ def check_azs(applications, model):
             az_counter[model.machines_to_az[machine]] += 1
         for az in az_counter:
             num_this_az = az_counter[az]
-            if num_this_az < min_per_az or num_this_az > max_per_az:
+            if num_this_az < min_per_az:
                 model.az_unbalanced_apps[app_name] = [num_units, az_counter]
 
 
