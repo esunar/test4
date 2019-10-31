@@ -293,6 +293,7 @@ def map_machines_to_az(machines, model):
             continue
 
         hardware = machines[machine]["hardware"]
+        found_az = False
         for entry in hardware.split():
             if entry.startswith("availability-zone="):
                 found_az = True
