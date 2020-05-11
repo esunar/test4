@@ -1,3 +1,9 @@
+juju-lint (1.0.1) xenial; urgency=medium
+
+  * Restructure tool and allow remote linting of models and bundles via SSH. 
+
+ -- James Hebden <james.hebden@canonical.com>  Mon, 11 May 2020 07:47:37 +1000
+
 juju-lint (1.0.0.dev2) xenial; urgency=medium
 
   * Add canonical-openstack-rules.yaml in contrib directory.

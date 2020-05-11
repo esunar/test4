@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+"""Setuptools packaging metadata for juju-lint."""
 
 import re
 import setuptools
@@ -29,7 +30,7 @@ with open("debian/changelog", "r") as fh:
     version = re.search(r'\((.*)\)', fh.readline()).group(1)
 
 setuptools.setup(
-    name="juju-lint",
+    name="jujulint",
     version=version,
     author="Canonical",
     author_email="juju@lists.ubuntu.com",
@@ -47,4 +48,4 @@ setuptools.setup(
     py_modules=["jujulint"],
     entry_points={
         'console_scripts': [
-            'juju-lint=jujulint:main']})
+            'juju-lint=jujulint.cli:main']})

@@ -1,7 +1,11 @@
+---
 name: juju-lint
 version: auto
 summary: Linter for Juju models to compare deployments with configurable policy
-description: Linter for Juju models to compare deployments with configurable policy
+description: |
+    Linter for remote or local Juju models.
+    Compares remote deployments with configurable policy rules.
+    Linting can also be performed on a YAML file representing cloud state.
 grade: stable
 confinement: classic
 version-script: |
