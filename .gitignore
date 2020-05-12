@@ -9,6 +9,8 @@ tests/report/
 # python artefacts
 __pycache__
 *.pyc
+.eggs
+*.egg-info
 
 # test artefacts
 tests/report
@@ -23,3 +25,6 @@ parts/
 prime/
 snap/.snapcraft/
 stage/
+
+# runtime
+output/
