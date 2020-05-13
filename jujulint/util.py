@@ -30,7 +30,7 @@ def flatten_list(lumpy_list):
     return flat_list
 
 
-def is_container(self, machine):
+def is_container(machine):
     """Check if a provided machine is a container."""
     if "/" in machine:
         return True

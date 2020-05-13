@@ -63,23 +63,30 @@ class ModelInfo(object):
 class Linter:
     """Linter for a Juju model, instantiate a new class for each model."""
 
-    def __init__(self):
+    def __init__(self, name, filename, overrides=None):
         """Instantiate linter."""
         self.logger = Logger()
         self.lint_rules = {}
         self.model = ModelInfo()
+        self.filename = filename
+        self.overrides = overrides
+        self.name = name
 
-    def read_rules(self, filename, overrides=None):
+    def read_rules(self):
         """Read and parse rules from YAML, optionally processing provided overrides."""
-        with open(filename, "r") as yaml_file:
+        with open(self.filename, "r") as yaml_file:
             self.lint_rules = yaml.safe_load(yaml_file)
-        if overrides:
-            for override in overrides.split("#"):
+        if self.overrides:
+            for override in self.overrides.split("#"):
                 (name, where) = override.split(":")
-                self.logger.info("Overriding %s with %s" % (name, where))
+                self.logger.info(
+                    "[{}] Overriding {} with {}".format(self.name, name, where)
+                )
                 self.lint_rules["subordinates"][name] = dict(where=where)
         self.lint_rules["known charms"] = flatten_list(self.lint_rules["known charms"])
-        self.logger.debug("Lint Rules: {}".format(pprint.pformat(self.lint_rules)))
+        self.logger.debug(
+            "[{}] Lint Rules: {}".format(self.name, pprint.pformat(self.lint_rules))
+        )
 
     def process_subordinates(self, app_d, app_name):
         """Iterate over subordinates and run subordinate checks."""
@@ -94,7 +101,7 @@ class Linter:
                 subordinates = [i.split("/")[0] for i in subordinates]
             else:
                 subordinates = []
-            self.logger.debug("%s: %s" % (unit, subordinates))
+            self.logger.debug("[{}] {}: {}".format(self.name, unit, subordinates))
             machine = app_d["units"][unit]["machine"]
             self.model.subs_on_machines.setdefault(machine, set())
             for sub in subordinates:
@@ -119,14 +126,16 @@ class Linter:
         for required_sub in self.lint_rules["subordinates"]:
             self.model.missing_subs.setdefault(required_sub, set())
             self.model.extraneous_subs.setdefault(required_sub, set())
-            self.logger.debug("Checking for sub %s" % (required_sub))
+            self.logger.debug(
+                "[{}] Checking for sub {}".format(self.name, required_sub)
+            )
             where = self.lint_rules["subordinates"][required_sub]["where"]
             for machine in self.model.subs_on_machines:
-                self.logger.debug("Checking on %s" % (machine))
+                self.logger.debug("[{}] Checking on {}".format(self.name, machine))
                 present_subs = self.model.subs_on_machines[machine]
                 apps = self.model.apps_on_machines[machine]
                 if where.startswith("on "):  # only on specific apps
-                    self.logger.debug("requirement is = form...")
+                    self.logger.debug("[{}] Requirement {} is = from...")
                     required_on = where[3:]
                     if required_on not in apps:
                         self.logger.debug("... NOT matched")
@@ -167,11 +176,11 @@ class Linter:
                         suffixes = self.lint_rules["subordinates"][required_sub][
                             "host-suffixes"
                         ]
-                    self.logger.debug("-> suffixes == %s" % (suffixes))
+                    self.logger.debug("-> suffixes == {}".format(suffixes))
                     found = False
                     for suffix in suffixes:
-                        looking_for = "%s-%s" % (required_sub, suffix)
-                        self.logger.debug("-> Looking for %s" % (looking_for))
+                        looking_for = "{}-{}".format(required_sub, suffix)
+                        self.logger.debug("-> Looking for {}".format(looking_for))
                         if looking_for in present_subs:
                             self.logger.debug("-> FOUND!!!")
                             found = True
@@ -179,7 +188,7 @@ class Linter:
                         for sub in present_subs:
                             if self.model.app_to_charm[sub] == required_sub:
                                 self.logger.debug(
-                                    "!!: winner winner chicken dinner %s" % (sub)
+                                    "Winner winner, chicken dinner! 🍗 {}".format(sub)
                                 )
                                 found = True
                     if not found:
@@ -190,14 +199,16 @@ class Linter:
                     continue
                 elif where not in ["all", "all or nothing"]:
                     self.logger.fubar(
-                        "invalid requirement '%s' on %s" % (where, required_sub)
+                        "invalid requirement '{}' on {}".format(
+                            self.name, where, required_sub
+                        )
                     )
                 self.logger.debug("requirement is 'all' OR we fell through.")
                 if required_sub not in present_subs:
                     for sub in present_subs:
                         if self.model.app_to_charm[sub] == required_sub:
                             self.logger.debug(
-                                "!!!: winner winner chicken dinner %s" % (sub)
+                                "Winner winner, chicken dinner! 🍗 {}".format(sub)
                             )
                             continue
                     self.logger.debug("not found.")
@@ -215,14 +226,14 @@ class Linter:
         """Check we recognise the charms which are in the model."""
         for charm in self.model.charms:
             if charm not in self.lint_rules["known charms"]:
-                self.logger.error("charm '%s' not recognised" % (charm))
+                self.logger.error("charm '{}' not recognised".format(charm))
         # Then look for charms we require
         for charm in self.lint_rules["operations mandatory"]:
             if charm not in self.model.charms:
-                self.logger.error("ops charm '%s' not found" % (charm))
+                self.logger.error("ops charm '{}' not found".format(charm))
         for charm in self.lint_rules["openstack mandatory"]:
             if charm not in self.model.charms:
-                self.logger.error("OpenStack charm '%s' not found" % (charm))
+                self.logger.error("OpenStack charm '{}' not found".format(charm))
 
     def results(self):
         """Provide results of the linting process."""
@@ -230,15 +241,17 @@ class Linter:
             self.logger.info("The following subordinates couldn't be found:")
             for sub in self.model.missing_subs:
                 self.logger.error(
-                    " -> %s [%s]"
-                    % (sub, ", ".join(sorted(self.model.missing_subs[sub])))
+                    " -> {} [{}]".format(
+                        sub, ", ".join(sorted(self.model.missing_subs[sub]))
+                    )
                 )
         if self.model.extraneous_subs:
             self.logger.info("following subordinates where found unexpectedly:")
             for sub in self.model.extraneous_subs:
                 self.logger.error(
-                    " -> %s [%s]"
-                    % (sub, ", ".join(sorted(self.model.extraneous_subs[sub])))
+                    " -> {} [{}]".format(
+                        sub, ", ".join(sorted(self.model.extraneous_subs[sub]))
+                    )
                 )
         if self.model.duelling_subs:
             self.logger.info(
@@ -246,39 +259,47 @@ class Linter:
             )
             for sub in self.model.duelling_subs:
                 self.logger.error(
-                    " -> %s [%s]"
-                    % (sub, ", ".join(sorted(self.model.duelling_subs[sub])))
+                    " -> {} [{}]".format(
+                        sub, ", ".join(sorted(self.model.duelling_subs[sub]))
+                    )
                 )
         if self.model.az_unbalanced_apps:
             self.logger.error("The following apps are unbalanced across AZs: ")
             for app in self.model.az_unbalanced_apps:
                 (num_units, az_counter) = self.model.az_unbalanced_apps[app]
                 az_map = ", ".join(
-                    ["%s: %s" % (az, az_counter[az]) for az in az_counter]
+                    ["{}: {}".format(az, az_counter[az]) for az in az_counter]
                 )
                 self.logger.error(
-                    " -> %s: %s units, deployed as: %s" % (app, num_units, az_map)
+                    " -> {}: {} units, deployed as: {}".format(app, num_units, az_map)
                 )
 
     def map_charms(self, applications):
         """Process applications in the model, validating and normalising the names."""
         for app in applications:
-            charm = applications[app]["charm"]
-            match = re.match(
-                r"^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
-            )
-            if not match:
-                raise InvalidCharmNameError("charm name '{}' is invalid".format(charm))
-            charm = match.group(1)
-            self.model.charms.add(charm)
-            self.model.app_to_charm[app] = charm
+            if "charm" in applications[app]:
+                charm = applications[app]["charm"]
+                match = re.match(
+                    r"^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
+                )
+                if not match:
+                    raise InvalidCharmNameError(
+                        "charm name '{}' is invalid".format(charm)
+                    )
+                charm = match.group(1)
+                self.model.charms.add(charm)
+                self.model.app_to_charm[app] = charm
+            else:
+                self.logger.error(
+                    "Could not detect which charm is used for application {}".format(app)
+                )
 
-    def map_machines_to_az(self, machines, model):
+    def map_machines_to_az(self, machines):
         """Map machines in the model to their availability zone."""
         for machine in machines:
             if "hardware" not in machines[machine]:
-                self.logger.error(
-                    "I: Machine %s has no hardware info; skipping." % (machine)
+                self.logger.warn(
+                    "Machine {} has no hardware info; skipping.".format(machine)
                 )
                 continue
 
@@ -288,12 +309,13 @@ class Linter:
                 if entry.startswith("availability-zone="):
                     found_az = True
                     az = entry.split("=")[1]
-                    model.machines_to_az[machine] = az
+                    self.model.machines_to_az[machine] = az
                     break
             if not found_az:
-                self.logger.error(
-                    "I: Machine %s has no availability-zone info in hardware field; skipping."
-                    % (machine)
+                self.logger.warn(
+                    "Machine {} has no availability-zone info in hardware field; skipping.".format(
+                        machine
+                    )
                 )
 
     def check_status(self, what, status, expected):
@@ -302,8 +324,7 @@ class Linter:
             expected = [expected]
         if status.get("current") not in expected:
             self.logger.error(
-                "%s has status '%s' (since: %s, message: %s); {We expected: %s}"
-                % (
+                "{} has status '{}' (since: {}, message: {}); (We expected: {})".format(
                     what,
                     status.get("current"),
                     status.get("since"),
@@ -327,16 +348,26 @@ class Linter:
             primary_expected = ["active", "unknown"]
             juju_expected = None
 
-        self.check_status(
-            "%s %s" % (status_type.title(), name),
-            data_d[primary],
-            expected=primary_expected,
-        )
-        if juju_expected:
+        if primary in data_d:
             self.check_status(
-                "Juju on %s %s" % (status_type, name),
-                data_d["juju-status"],
-                expected=juju_expected,
+                "{} {}".format(status_type.title(), name),
+                data_d[primary],
+                expected=primary_expected,
+            )
+            if juju_expected:
+                if "juju-status" in data_d:
+                    self.check_status(
+                        "Juju on {} {}".format(status_type, name),
+                        data_d["juju-status"],
+                        expected=juju_expected,
+                    )
+                else:
+                    self.logger.warn(
+                        "Could not determine Juju status for {}.".format(name)
+                    )
+        else:
+            self.logger.warn(
+                "Could not determine appropriate status key for {}.".format(name)
             )
 
     def check_statuses(self, juju_status, applications):
@@ -386,8 +417,7 @@ class Linter:
         num_azs = len(azs)
         if num_azs != 3:
             self.logger.error(
-                "E: Found %s AZs (not 3); and I don't currently know how to lint that."
-                % (num_azs)
+                "Found {} AZs (not 3); and I don't currently know how to lint that.".format(num_azs)
             )
             return
 
@@ -404,8 +434,7 @@ class Linter:
                 machine = machine.split("/")[0]
                 if machine not in self.model.machines_to_az:
                     self.logger.error(
-                        "E: [%s] Can't find machine %s in machine to AZ mapping data"
-                        % (app_name, machine)
+                        "[{}] Can't find machine {} in machine to AZ mapping data".format(app_name, machine)
                     )
                     continue
                 az_counter[self.model.machines_to_az[machine]] += 1
@@ -414,12 +443,12 @@ class Linter:
                 if num_this_az < min_per_az:
                     self.model.az_unbalanced_apps[app_name] = [num_units, az_counter]
 
-    def lint_string(self, yaml):
+    def lint_yaml_string(self, yaml):
         """Lint provided YAML string."""
         parsed_yaml = yaml.safe_load(yaml)
         return self.do_lint(parsed_yaml)
 
-    def lint_file(self, filename):
+    def lint_yaml_file(self, filename):
         """Load and lint provided YAML file."""
         if filename:
             with open(filename, "r") as infile:
@@ -435,22 +464,25 @@ class Linter:
         if applications not in parsed_yaml:
             applications = "services"
 
-        # Build a list of deployed charms and mapping of charms <-> applications
-        self.map_charms(parsed_yaml[applications], self.model)
+        if applications in parsed_yaml:
 
-        # Then map out subordinates to applications
-        for app in parsed_yaml[applications]:
-            self.process_subordinates(parsed_yaml[applications][app], app, self.model)
+            # Build a list of deployed charms and mapping of charms <-> applications
+            self.map_charms(parsed_yaml[applications])
 
-        self.map_machines_to_az(parsed_yaml["machines"], self.model)
-        self.check_azs(parsed_yaml[applications], self.model)
+            # Then map out subordinates to applications
+            for app in parsed_yaml[applications]:
+                self.process_subordinates(parsed_yaml[applications][app], app)
 
-        self.check_subs()
-        self.check_charms()
+            self.map_machines_to_az(parsed_yaml["machines"])
+            self.check_azs(parsed_yaml[applications])
 
-        if parsed_yaml.get("machines"):
-            self.check_statuses(parsed_yaml, applications)
-        else:
-            self.logger.info("Not checking status, this is a bundle")
+            self.check_subs()
+            self.check_charms()
 
-        self.results()
+            if parsed_yaml.get("machines"):
+                self.check_statuses(parsed_yaml, applications)
+            else:
+                self.logger.info("Not checking status, this is a just a bundle")
+
+            self.results()
+        self.logger.info("Model contains no applications, skipping.")

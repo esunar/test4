@@ -34,6 +34,10 @@ class Cli:
         self.config = Config()
         self.logger = Logger(self.config["logging"]["loglevel"].get())
         self.version = pkg_resources.require("jujulint")[0].version
+        self.lint_rules = "{}/{}".format(
+            self.config.config_dir(),
+            self.config["rules"]["file"].get()
+        )
 
     def startup_message(self):
         """Print startup message to log."""
@@ -74,6 +78,7 @@ class Cli:
                     access_method=access_method,
                     ssh_host=ssh_host,
                     sudo_user=sudo_user,
+                    lint_rules=self.lint_rules,
                 )
             # refresh information
             cloud_instance.refresh()

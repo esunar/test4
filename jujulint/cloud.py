@@ -44,7 +44,15 @@ import yaml
 class Cloud:
     """Cloud helper class."""
 
-    def __init__(self, name, access_method="local", ssh_host=None, sudo_user=None):
+    def __init__(
+        self,
+        name,
+        lint_rules=None,
+        access_method="local",
+        ssh_host=None,
+        sudo_user=None,
+        lint_overrides=None,
+    ):
         """Instantiate Cloud configuration and state."""
         # instance variables
         self.cloud_state = {}
@@ -54,6 +62,8 @@ class Cloud:
         self.hostname = ""
         self.name = ""
         self.fabric_config = {}
+        self.lint_rules = lint_rules
+        self.lint_overrides = lint_overrides
 
         # process variables
         self.logger = Logger()
@@ -317,5 +327,14 @@ class Cloud:
         )
         # run lint rules
         self.logger.debug("Running cloud-agnostic Juju audits.")
-        linter = Linter()
-        linter.read_rules()
+        if self.lint_rules:
+            linter = Linter(self.name, self.lint_rules, overrides=self.lint_overrides)
+            linter.read_rules()
+            for controller in self.cloud_state.keys():
+                for model in self.cloud_state[controller]["models"].keys():
+                    self.logger.info(
+                        "[{}] Linting model information for {}, controller {}, model {}...".format(
+                            self.name, self.hostname, controller, model
+                        )
+                    )
+                    linter.do_lint(self.cloud_state[controller]["models"][model])
