@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Logging helper functions."""
+import colorlog
 import logging
 import sys
 
@@ -26,19 +27,29 @@ class Logger:
 
     def __init__(self, level=None, logfile=None):
         """Set up logging instance and set log level."""
-        self.logger = logging.getLogger()
+        self.logger = colorlog.getLogger()
         self.set_level(level)
         if not len(self.logger.handlers):
-            formatter = logging.Formatter(
-                fmt="%(asctime)s [%(levelname)s] %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
+            format_string = "%(log_color)s%(asctime)s [%(levelname)s] %(message)s"
+            date_format = "%Y-%m-%d %H:%M:%S"
+            colour_formatter = colorlog.ColoredFormatter(
+                format_string,
+                datefmt=date_format,
+                log_colors={
+                    "DEBUG": "cyan",
+                    "INFO": "green",
+                    "WARNING": "yellow",
+                    "ERROR": "red",
+                    "CRITICAL": "red,bg_white",
+                },
             )
-            console = logging.StreamHandler()
-            console.setFormatter(formatter)
+            console = colorlog.StreamHandler()
+            console.setFormatter(colour_formatter)
             self.logger.addHandler(console)
             if logfile:
                 try:
-                    file_logger = logging.getLogger("file")
+                    file_logger = colorlog.getLogger("file")
+                    plain_formatter = logging.Formatter(format_string, datefmt=date_format)
                     # If we send output to the file logger specifically, don't propagate it
                     # to the root logger as well to avoid duplicate output. So if we want
                     # to only send logging output to the file, you would do this:
@@ -47,8 +58,8 @@ class Logger:
                     #  logging.info("message for console and logfile")
                     file_logger.propagate = False
 
-                    file_handler = logging.file_handler(logfile)
-                    file_handler.setFormatter(formatter)
+                    file_handler = logging.FileHandler(logfile)
+                    file_handler.setFormatter(plain_formatter)
                     self.logger.addHandler(file_handler)
                     file_logger.addHandler(file_handler)
                 except IOError:

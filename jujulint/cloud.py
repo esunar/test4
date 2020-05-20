@@ -34,6 +34,7 @@ Todo:
 
 """
 from fabric2 import Connection, Config
+from paramiko.ssh_exception import SSHException
 from jujulint.logging import Logger
 from jujulint.lint import Linter
 from subprocess import check_output
@@ -52,6 +53,7 @@ class Cloud:
         ssh_host=None,
         sudo_user=None,
         lint_overrides=None,
+        cloud_type=None,
     ):
         """Instantiate Cloud configuration and state."""
         # instance variables
@@ -64,6 +66,7 @@ class Cloud:
         self.fabric_config = {}
         self.lint_rules = lint_rules
         self.lint_overrides = lint_overrides
+        self.cloud_type = cloud_type
 
         # process variables
         self.logger = Logger()
@@ -96,13 +99,25 @@ class Cloud:
                         command, self.hostname, self.sudo_user
                     )
                 )
-                result = self.connection.sudo(command, hide=True, warn=True)
+                try:
+                    result = self.connection.sudo(command, hide=True, warn=True)
+                except SSHException as e:
+                    self.logger.error(
+                        "[{}] SSH command {} failed: {}".format(self.name, command, e)
+                    )
+                    return None
                 return result.stdout
             else:
                 self.logger.debug(
                     "Running SSH command {} on {}...".format(command, self.hostname)
                 )
-                result = self.connection.run(command, hide=True, warn=True)
+                try:
+                    result = self.connection.run(command, hide=True, warn=True)
+                except SSHException as e:
+                    self.logger.error(
+                        "[{}] SSH command {} failed: {}".format(self.name, command, e)
+                    )
+                    return None
                 return result.stdout
 
     def run_unit_command(self, target, command):
@@ -116,57 +131,69 @@ class Cloud:
     def get_juju_controllers(self):
         """Get a list of Juju controllers."""
         controller_output = self.run_command("juju controllers --format yaml")
-        controllers = self.parse_yaml(controller_output)
+        if controller_output:
+            controllers = self.parse_yaml(controller_output)
 
-        if len(controllers) > 0:
-            self.logger.debug("Juju controller list: {}".format(controllers[0]))
-            if "controllers" in controllers[0]:
-                for controller in controllers[0]["controllers"].keys():
-                    self.logger.info(
-                        "[{}] Found Juju controller: {}".format(self.name, controller)
-                    )
-                    if controller not in self.cloud_state.keys():
-                        self.cloud_state[controller] = {}
-                    self.cloud_state[controller]["config"] = controllers[0][
-                        "controllers"
-                    ][controller]
+            if len(controllers) > 0:
+                self.logger.debug("Juju controller list: {}".format(controllers[0]))
+                if "controllers" in controllers[0]:
+                    for controller in controllers[0]["controllers"].keys():
+                        self.logger.info(
+                            "[{}] Found Juju controller: {}".format(
+                                self.name, controller
+                            )
+                        )
+                        if controller not in self.cloud_state.keys():
+                            self.cloud_state[controller] = {}
+                        self.cloud_state[controller]["config"] = controllers[0][
+                            "controllers"
+                        ][controller]
+            return True
+        self.logger.error("[{}] Could not get controller list".format(self.name))
+        return False
 
     def get_juju_models(self):
         """Get a list of Juju models."""
-        self.get_juju_controllers()
-        for controller in self.cloud_state.keys():
-            self.logger.info(
-                "[{}] Getting models for controller: {}".format(self.name, controller)
-            )
-            models_data = self.run_command(
-                "juju models -c {} --format yaml".format(controller)
-            )
-            self.logger.debug("Getting models from: {}".format(models_data))
-            models = self.parse_yaml(models_data)
-            if len(models) > 0:
-                if "models" in models[0]:
-                    for model in models[0]["models"]:
-                        model_name = model["short-name"]
-                        self.logger.info(
-                            "[{}] Processing model {} for controller: {}".format(
-                                self.name, model_name, controller
+        result = self.get_juju_controllers()
+        if result:
+            for controller in self.cloud_state.keys():
+                self.logger.info(
+                    "[{}] Getting models for controller: {}".format(
+                        self.name, controller
+                    )
+                )
+                models_data = self.run_command(
+                    "juju models -c {} --format yaml".format(controller)
+                )
+                self.logger.debug("Getting models from: {}".format(models_data))
+                models = self.parse_yaml(models_data)
+                if len(models) > 0:
+                    if "models" in models[0]:
+                        for model in models[0]["models"]:
+                            model_name = model["short-name"]
+                            self.logger.info(
+                                "[{}] Processing model {} for controller: {}".format(
+                                    self.name, model_name, controller
+                                )
                             )
-                        )
-                        self.logger.debug(
-                            "Processing model {} for controller {}: {}".format(
-                                model_name, controller, model
+                            self.logger.debug(
+                                "Processing model {} for controller {}: {}".format(
+                                    model_name, controller, model
+                                )
                             )
-                        )
-                        if "models" not in self.cloud_state[controller].keys():
-                            self.cloud_state[controller]["models"] = {}
-                        if (
-                            model_name
-                            not in self.cloud_state[controller]["models"].keys()
-                        ):
-                            self.cloud_state[controller]["models"][model_name] = {}
-                        self.cloud_state[controller]["models"][model_name][
-                            "config"
-                        ] = model
+                            if "models" not in self.cloud_state[controller].keys():
+                                self.cloud_state[controller]["models"] = {}
+                            if (
+                                model_name
+                                not in self.cloud_state[controller]["models"].keys()
+                            ):
+                                self.cloud_state[controller]["models"][model_name] = {}
+                            self.cloud_state[controller]["models"][model_name][
+                                "config"
+                            ] = model
+            return True
+        self.logger.error("[{}] Could not get model list".format(self.name))
+        return False
 
     def get_juju_status(self, controller, model):
         """Get a view of juju status for a given model."""
@@ -294,22 +321,24 @@ class Cloud:
         self.logger.info(
             "[{}] Getting Juju state for {}".format(self.name, self.hostname)
         )
-        self.get_juju_models()
-        self.logger.debug(
-            "Cloud state for {} after gathering models:\n{}".format(
-                self.name, yaml.dump(self.cloud_state)
+        result = self.get_juju_models()
+        if result:
+            self.logger.debug(
+                "Cloud state for {} after gathering models:\n{}".format(
+                    self.name, yaml.dump(self.cloud_state)
+                )
             )
-        )
-        for controller in self.cloud_state.keys():
-            for model in self.cloud_state[controller]["models"].keys():
-                self.get_juju_status(controller, model)
-                self.get_juju_bundle(controller, model)
-        self.logger.debug(
-            "Cloud state for {} after gathering apps:\n{}".format(
-                self.name, yaml.dump(self.cloud_state)
+            for controller in self.cloud_state.keys():
+                for model in self.cloud_state[controller]["models"].keys():
+                    self.get_juju_status(controller, model)
+                    self.get_juju_bundle(controller, model)
+            self.logger.debug(
+                "Cloud state for {} after gathering apps:\n{}".format(
+                    self.name, yaml.dump(self.cloud_state)
+                )
             )
-        )
-        return self.cloud_state
+            return True
+        return False
 
     def refresh(self):
         """Refresh all information about the Juju cloud."""
@@ -328,10 +357,17 @@ class Cloud:
         # run lint rules
         self.logger.debug("Running cloud-agnostic Juju audits.")
         if self.lint_rules:
-            linter = Linter(self.name, self.lint_rules, overrides=self.lint_overrides)
-            linter.read_rules()
             for controller in self.cloud_state.keys():
                 for model in self.cloud_state[controller]["models"].keys():
+                    linter = Linter(
+                        self.name,
+                        self.lint_rules,
+                        overrides=self.lint_overrides,
+                        cloud_type=self.cloud_type,
+                        controller_name=controller,
+                        model_name=model,
+                    )
+                    linter.read_rules()
                     self.logger.info(
                         "[{}] Linting model information for {}, controller {}, model {}...".format(
                             self.name, self.hostname, controller, model

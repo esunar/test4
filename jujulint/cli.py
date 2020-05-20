@@ -35,8 +35,7 @@ class Cli:
         self.logger = Logger(self.config["logging"]["loglevel"].get())
         self.version = pkg_resources.require("jujulint")[0].version
         self.lint_rules = "{}/{}".format(
-            self.config.config_dir(),
-            self.config["rules"]["file"].get()
+            self.config.config_dir(), self.config["rules"]["file"].get()
         )
 
     def startup_message(self):
@@ -53,35 +52,43 @@ class Cli:
             )
         )
 
-    def audit(self):
-        """Run the main audit process process each cloud."""
-        # load clouds and loop through each defined cloud
+    def audit_all(self):
+        """Iterate over clouds and run audit."""
         self.logger.debug("Starting audit")
         for cloud_name in self.config["clouds"].get():
-            if cloud_name not in self.clouds.keys():
-                self.clouds[cloud_name] = {}
-            cloud = self.config["clouds"][cloud_name].get()
-            access_method = "local"
-            ssh_host = None
-            sudo_user = None
-            if "access" in cloud:
-                access_method = cloud["access"]
-            if "sudo" in cloud:
-                sudo_user = cloud["sudo"]
-            if "host" in cloud:
-                ssh_host = cloud["host"]
-            self.logger.debug(cloud)
-            # load correct handler (OpenStack)
-            if cloud["type"] == "openstack":
-                cloud_instance = OpenStack(
-                    cloud_name,
-                    access_method=access_method,
-                    ssh_host=ssh_host,
-                    sudo_user=sudo_user,
-                    lint_rules=self.lint_rules,
-                )
-            # refresh information
-            cloud_instance.refresh()
+            self.audit(cloud_name)
+        # serialise state
+        if self.clouds:
+            self.write_yaml(self.clouds, "all-data.yaml")
+
+    def audit(self, cloud_name):
+        """Run the main audit process process each cloud."""
+        # load clouds and loop through each defined cloud
+        if cloud_name not in self.clouds.keys():
+            self.clouds[cloud_name] = {}
+        cloud = self.config["clouds"][cloud_name].get()
+        access_method = "local"
+        ssh_host = None
+        sudo_user = None
+        if "access" in cloud:
+            access_method = cloud["access"]
+        if "sudo" in cloud:
+            sudo_user = cloud["sudo"]
+        if "host" in cloud:
+            ssh_host = cloud["host"]
+        self.logger.debug(cloud)
+        # load correct handler (OpenStack)
+        if cloud["type"] == "openstack":
+            cloud_instance = OpenStack(
+                cloud_name,
+                access_method=access_method,
+                ssh_host=ssh_host,
+                sudo_user=sudo_user,
+                lint_rules=self.lint_rules,
+            )
+        # refresh information
+        result = cloud_instance.refresh()
+        if result:
             self.clouds[cloud_name] = cloud_instance.cloud_state
             self.logger.debug(
                 "Cloud state for {} after refresh: {}".format(
@@ -93,9 +100,8 @@ class Cli:
             )
             # run audit checks
             cloud_instance.audit()
-        # serialise state
-        if self.clouds:
-            self.write_yaml(self.clouds, "all-data.yaml")
+        else:
+            self.logger.error("[{}] Failed getting cloud state".format(cloud_name))
 
     def write_yaml(self, data, file_name):
         """Write collected information to YAML."""
@@ -108,4 +114,4 @@ def main():
     """Program entry point."""
     cli = Cli()
     cli.startup_message()
-    cli.audit()
+    cli.audit_all()

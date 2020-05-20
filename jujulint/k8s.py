@@ -16,9 +16,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""OpenStack checks module.
+"""Kubernetes checks module.
 
-This module provides checks for OpenStack clouds.
+This module provides checks for Kubernetes clouds.
 
 Attributes:
      access (string): Set the access method (local/ssh)
@@ -27,14 +27,11 @@ Attributes:
      sudo_user (string, optional): User to switch to via sudo when accessing the cloud, passed to the Cloud module
 
 Todo:
-    * Check neutron configuration
-      * Check MTU configuration on neutron-api and OVS charms
-      * Check neutron units interface config for MTU settings
-      * Check namespaces and MTUs within namespaces
-      * Check OpenStack network definitions for MTU mismatches
-    * Check OVS configuration
-    * Check nova configuration for live migration settings
-    * Check Ceph for sensible priorities and placement
+    * Add processing of kubectl information
+    * Pass cloud type back to lint module
+    * Add rules for k8s
+    * Check OpenStack integrator charm configuration
+    * Check distribution of k8s workloads to workers
 
 """
 
@@ -47,7 +44,6 @@ class OpenStack(Cloud):
     def __init__(self, *args, **kwargs):
         """Initialise class-local variables and configuration and pass to super."""
         super(OpenStack, self).__init__(*args, **kwargs)
-        self.cloud_type = 'openstack'
 
     def get_neutron_ports(self):
         """Get a list of neutron ports."""
@@ -65,5 +61,5 @@ class OpenStack(Cloud):
     def audit(self):
         """Audit OpenStack cloud and run base Cloud audits."""
         # add specific OpenStack checks here
-        self.logger.info("[{}] Running OpenStack-specific audit steps.".format(self.name))
+        self.logger.debug("Running OpenStack-specific audit steps.")
         super(OpenStack, self).audit()
