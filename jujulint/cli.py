@@ -18,6 +18,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Main entrypoint for the juju-lint CLI."""
 from jujulint.config import Config
+from jujulint.lint import Linter
 from jujulint.logging import Logger
 from jujulint.openstack import OpenStack
 import pkg_resources
@@ -51,6 +52,14 @@ class Cli:
                 self.config["logging"]["loglevel"].get(),
             )
         )
+
+    def audit_file(self, filename, cloud_type=None):
+        """Directly audit a YAML file."""
+        self.logger.debug("Starting audit of file {}".format(filename))
+        linter = Linter(filename, self.lint_rules, cloud_type=cloud_type,)
+        linter.read_rules()
+        self.logger.info("[{}] Linting manual file...".format(filename))
+        linter.lint_yaml_file(filename)
 
     def audit_all(self):
         """Iterate over clouds and run audit."""
@@ -114,4 +123,14 @@ def main():
     """Program entry point."""
     cli = Cli()
     cli.startup_message()
-    cli.audit_all()
+    manual_file = cli.config["manual-file"].get()
+    if manual_file:
+        if "manual-type" in cli.config:
+            manual_type = cli.config["manual-type"].get()
+            cli.audit_file(
+                manual_file, cloud_type=manual_type
+            )
+        else:
+            cli.audit_file(manual_file)
+    else:
+        cli.audit_all()

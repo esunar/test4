@@ -56,6 +56,23 @@ class Config(Configuration):
             dest="rules.file",
         )
         parser.add_argument(
+            "-f",
+            "--cloud-file",
+            help=(
+                "File to read state from. Supports bundles and status output in YAML format."
+                "Setting this disables collection of data from remote or local clouds configured via config.yaml."
+            ),
+            dest="manual-file",
+        )
+        parser.add_argument(
+            "-t",
+            "--cloud-type",
+            help=(
+                "Sets the cloud type when specifying a YAML file to audit with -f or --cloud-file."
+            ),
+            dest="manual-type",
+        )
+        parser.add_argument(
             "-o",
             "--override-subordinate",
             dest="override.subordinate",
