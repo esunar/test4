@@ -1,6 +1,7 @@
 ---
 name: juju-lint
-version: auto
+base: core18
+version: git
 summary: Linter for Juju models to compare deployments with configurable policy
 description: |
     Linter for remote or local Juju models.
@@ -8,26 +9,17 @@ description: |
     Linting can also be performed on a YAML file representing cloud state.
 grade: stable
 confinement: classic
-version-script: |
-  echo `head -1 debian/changelog | sed -rn 's/.*\((.*)\).*/\1/p'`-`git describe --dirty --always --tags | sed -r 's/v(.*)/\1/g'`
 apps:
   juju-lint:
-    command: usr/bin/python3 $SNAP/bin/juju-lint
-    environment:
-      PATH: "/snap/juju-lint/current/bin:/snap/juju-lint/current/usr/bin:/bin:/usr/bin:"
+    command: juju-lint
+    plugs:
+      - network
+      - ssh-keys
 parts:
   juju-lint:
     plugin: python
     python-version: python3
-    python-packages:
-      - 3rdparty/attrs-18.1.0.tar.gz
-    build-packages:
-      - python3-setuptools
-    stage-packages:
-      - libc6
-      - python3-yaml
     source: .
-    source-type: git
   juju-lint-contrib:
     plugin: dump
     source: .
