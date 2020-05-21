@@ -145,6 +145,152 @@ class Linter:
 
         return
 
+    def atoi(val):
+        """Deal with complex number representations as strings, returning a number."""
+        if type(val) != str:
+            return val
+
+        if type(val[-1]) != str:
+            return val
+
+        try:
+            _int = int(val[0:-1])
+        except Exception:
+            return val
+
+        quotient = 1024
+        if val[-1].lower() == val[-1]:
+            quotient = 1000
+
+        conv = {"g": quotient ** 3,
+                "m": quotient ** 2,
+                "k": quotient}
+
+        return _int * conv[val[-1].lower()]
+
+    def gte(self, name, check_value, rule, config):
+        """Check if value is greater than or equal to the check value."""
+        if rule in config:
+            current = self.atoi(config[rule])
+            expected = self.atoi(check_value)
+            if current >= expected:
+                self.logger.info(
+                    "[{}] [{}/{}] (PASS) Application {} has config for {} which is >= {}: {}.".format(
+                        self.cloud_name,
+                        self.controller_name,
+                        self.model_name,
+                        name,
+                        rule,
+                        check_value,
+                        config[rule],
+                    )
+                )
+                return True
+            self.logger.error(
+                "[{}] [{}/{}] (FAIL) Application {} has config for {} which is less than {}: {}.".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
+                    check_value,
+                    config[rule],
+                )
+            )
+            return False
+        self.logger.warn(
+            "[{}] [{}/{}] When checking if application {} has no config for {}, can't determine if >= than {}.".format(
+                self.cloud_name,
+                self.controller_name,
+                self.model_name,
+                name,
+                rule,
+                check_value,
+            )
+        )
+        return False
+
+    def isset(self, name, check_value, rule, config):
+        """Check if value is set per rule constraints."""
+        if rule in config:
+            if check_value is True:
+                self.logger.info(
+                    "[{}] [{}/{}] (PASS) Application {} correctly has manual config for {}: {}.".format(
+                        self.cloud_name,
+                        self.controller_name,
+                        self.model_name,
+                        name,
+                        rule,
+                        config[rule],
+                    )
+                )
+                return True
+            self.logger.error(
+                "[{}] [{}/{}] (FAIL) Application {} has manual config for {}: {}.".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
+                    config[rule],
+                )
+            )
+            return False
+        if check_value is False:
+            self.logger.info(
+                "[{}] [{}/{}] (PASS) Application {} is correctly using default config for {}.".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
+                )
+            )
+            return True
+        self.logger.error(
+            "[{}] [{}/{}] (FAIL) Application {} has no manual config for {}.".format(
+                self.cloud_name,
+                self.controller_name,
+                self.model_name,
+                name,
+                rule,
+            )
+        )
+        return False
+
+    def eq(self, name, check_value, rule, config):
+        """Check if value is matches the provided value or regex, autodetecting regex."""
+        if rule in config:
+            match = False
+            try:
+                match = re.match(re.compile(str(check_value)), str(config[rule]))
+            except re.error:
+                match = check_value == config[rule]
+            if match:
+                self.logger.info(
+                    "[{}] [{}/{}] Application {} has correct setting for {}: Expected {}, got {}.".format(
+                        self.cloud_name,
+                        self.controller_name,
+                        self.model_name,
+                        name,
+                        rule,
+                        check_value,
+                        config[rule],
+                    )
+                )
+                return True
+            self.logger.error(
+                "[{}] [{}/{}] Application {} has incorrect setting for {}: Expected {}, got {}.".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
+                    check_value,
+                    config[rule],
+                )
+            )
+
     def check_config(self, name, config, rules):
         """Check application against provided rules."""
         rules = dict(rules)
@@ -155,56 +301,21 @@ class Linter:
                 )
             )
             for check_op, check_value in rules[rule].items():
-                if rule in config:
-                    if check_op == "eq":
-                        match = False
-                        try:
-                            match = re.match(re.compile(str(check_value)), str(config[rule]))
-                        except re.error:
-                            match = check_value == config[rule]
-                        if match:
-                            self.logger.info(
-                                "[{}] [{}/{}] Application {} has correct setting for {}: Expected {}, got {}.".format(
-                                    self.cloud_name,
-                                    self.controller_name,
-                                    self.model_name,
-                                    name,
-                                    rule,
-                                    check_value,
-                                    config[rule],
-                                )
-                            )
-                        else:
-                            self.logger.error(
-                                "[{}] [{}/{}] Application {} has incorrect setting for {}: Expected {}, got {}.".format(
-                                    self.cloud_name,
-                                    self.controller_name,
-                                    self.model_name,
-                                    name,
-                                    rule,
-                                    check_value,
-                                    config[rule],
-                                )
-                            )
-                    else:
-                        self.logger.warn(
-                            "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
-                                self.cloud_name,
-                                self.controller_name,
-                                self.model_name,
-                                name,
-                                rule,
-                                check_op,
-                            )
-                        )
+                if check_op == "isset":
+                    self.isset(name, check_value, rule, config)
+                elif check_op == "eq":
+                    self.eq(name, check_value, rule, config)
+                elif check_op == "gte":
+                    self.eq(name, check_value, rule, config)
                 else:
                     self.logger.warn(
-                        "[{}] [{}/{}] Application {} has no value for checking {}.".format(
+                        "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
                             self.cloud_name,
                             self.controller_name,
                             self.model_name,
                             name,
                             rule,
+                            check_op,
                         )
                     )
 
