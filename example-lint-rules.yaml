@@ -1,4 +1,9 @@
 ---
+config:
+  example-charm:
+    example-setting:
+      eq: true
+
 subordinates:
   telegraf:
     where: all

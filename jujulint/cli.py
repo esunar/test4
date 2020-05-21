@@ -123,8 +123,8 @@ def main():
     """Program entry point."""
     cli = Cli()
     cli.startup_message()
-    manual_file = cli.config["manual-file"].get()
-    if manual_file:
+    if "manual-file" in cli.config:
+        manual_file = cli.config["manual-file"].get()
         if "manual-type" in cli.config:
             manual_type = cli.config["manual-type"].get()
             cli.audit_file(

@@ -32,7 +32,6 @@ from jujulint.logging import Logger
 
 # TODO:
 #  - tests
-#  - non-OK statuses?
 #  - missing relations for mandatory subordinates
 #  - info mode, e.g. num of machines, version (e.g. look at ceph), architecture
 
@@ -145,6 +144,93 @@ class Linter:
             self.model.apps_on_machines[machine].add(app_name)
 
         return
+
+    def check_config(self, name, config, rules):
+        """Check application against provided rules."""
+        rules = dict(rules)
+        for rule in rules:
+            self.logger.debug(
+                "[{}] [{}/{}] Checking {} for configuration {}".format(
+                    self.cloud_name, self.controller_name, self.model_name, name, rule
+                )
+            )
+            for check_op, check_value in rules[rule].items():
+                if rule in config:
+                    if check_op == "eq":
+                        match = False
+                        try:
+                            match = re.match(re.compile(str(check_value)), str(config[rule]))
+                        except re.error:
+                            match = check_value == config[rule]
+                        if match:
+                            self.logger.info(
+                                "[{}] [{}/{}] Application {} has correct setting for {}: Expected {}, got {}.".format(
+                                    self.cloud_name,
+                                    self.controller_name,
+                                    self.model_name,
+                                    name,
+                                    rule,
+                                    check_value,
+                                    config[rule],
+                                )
+                            )
+                        else:
+                            self.logger.error(
+                                "[{}] [{}/{}] Application {} has incorrect setting for {}: Expected {}, got {}.".format(
+                                    self.cloud_name,
+                                    self.controller_name,
+                                    self.model_name,
+                                    name,
+                                    rule,
+                                    check_value,
+                                    config[rule],
+                                )
+                            )
+                    else:
+                        self.logger.warn(
+                            "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
+                                self.cloud_name,
+                                self.controller_name,
+                                self.model_name,
+                                name,
+                                rule,
+                                check_op,
+                            )
+                        )
+                else:
+                    self.logger.warn(
+                        "[{}] [{}/{}] Application {} has no value for checking {}.".format(
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
+                            name,
+                            rule,
+                        )
+                    )
+
+    def check_configuration(self, applications):
+        """Check applicaton configs in the model."""
+        for application in applications.keys():
+            # look for config rules for this application
+            lint_rules = []
+            charm_name = applications[application]["charm-name"]
+            if "config" in self.lint_rules:
+                if charm_name in self.lint_rules["config"]:
+                    lint_rules = self.lint_rules["config"][charm_name].items()
+
+            if self.cloud_type == "openstack":
+                # process openstack config rules
+                if "openstack config" in self.lint_rules:
+                    if charm_name in self.lint_rules["openstack config"]:
+                        lint_rules.extend(
+                            self.lint_rules["openstack config"][charm_name].items()
+                        )
+
+            if lint_rules:
+                if "options" in applications[application]:
+                    self.check_config(
+                        application, applications[application]["options"], lint_rules
+                    )
 
     def check_subs(self):
         """Check the subordinates in the model."""
@@ -659,6 +745,9 @@ class Linter:
 
             # Build a list of deployed charms and mapping of charms <-> applications
             self.map_charms(parsed_yaml[applications])
+
+            # Check configuration
+            self.check_configuration(parsed_yaml[applications])
 
             # Then map out subordinates to applications
             for app in parsed_yaml[applications]:
