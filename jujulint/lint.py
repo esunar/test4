@@ -213,24 +213,25 @@ class Linter:
         for application in applications.keys():
             # look for config rules for this application
             lint_rules = []
-            charm_name = applications[application]["charm-name"]
-            if "config" in self.lint_rules:
-                if charm_name in self.lint_rules["config"]:
-                    lint_rules = self.lint_rules["config"][charm_name].items()
+            if "charm-name" in applications[application]:
+                charm_name = applications[application]["charm-name"]
+                if "config" in self.lint_rules:
+                    if charm_name in self.lint_rules["config"]:
+                        lint_rules = self.lint_rules["config"][charm_name].items()
 
-            if self.cloud_type == "openstack":
-                # process openstack config rules
-                if "openstack config" in self.lint_rules:
-                    if charm_name in self.lint_rules["openstack config"]:
-                        lint_rules.extend(
-                            self.lint_rules["openstack config"][charm_name].items()
+                if self.cloud_type == "openstack":
+                    # process openstack config rules
+                    if "openstack config" in self.lint_rules:
+                        if charm_name in self.lint_rules["openstack config"]:
+                            lint_rules.extend(
+                                self.lint_rules["openstack config"][charm_name].items()
+                            )
+
+                if lint_rules:
+                    if "options" in applications[application]:
+                        self.check_config(
+                            application, applications[application]["options"], lint_rules
                         )
-
-            if lint_rules:
-                if "options" in applications[application]:
-                    self.check_config(
-                        application, applications[application]["options"], lint_rules
-                    )
 
     def check_subs(self):
         """Check the subordinates in the model."""
