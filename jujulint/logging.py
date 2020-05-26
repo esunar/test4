@@ -49,7 +49,9 @@ class Logger:
             if logfile:
                 try:
                     file_logger = colorlog.getLogger("file")
-                    plain_formatter = logging.Formatter(format_string, datefmt=date_format)
+                    plain_formatter = logging.Formatter(
+                        format_string, datefmt=date_format
+                    )
                     # If we send output to the file logger specifically, don't propagate it
                     # to the root logger as well to avoid duplicate output. So if we want
                     # to only send logging output to the file, you would do this:

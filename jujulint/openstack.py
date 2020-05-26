@@ -47,7 +47,7 @@ class OpenStack(Cloud):
     def __init__(self, *args, **kwargs):
         """Initialise class-local variables and configuration and pass to super."""
         super(OpenStack, self).__init__(*args, **kwargs)
-        self.cloud_type = 'openstack'
+        self.cloud_type = "openstack"
 
     def get_neutron_ports(self):
         """Get a list of neutron ports."""
@@ -65,5 +65,7 @@ class OpenStack(Cloud):
     def audit(self):
         """Audit OpenStack cloud and run base Cloud audits."""
         # add specific OpenStack checks here
-        self.logger.info("[{}] Running OpenStack-specific audit steps.".format(self.name))
+        self.logger.info(
+            "[{}] Running OpenStack-specific audit steps.".format(self.name)
+        )
         super(OpenStack, self).audit()

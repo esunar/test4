@@ -162,9 +162,7 @@ class Linter:
         if val[-1].lower() == val[-1]:
             quotient = 1000
 
-        conv = {"g": quotient ** 3,
-                "m": quotient ** 2,
-                "k": quotient}
+        conv = {"g": quotient ** 3, "m": quotient ** 2, "k": quotient}
 
         return _int * conv[val[-1].lower()]
 
@@ -239,21 +237,13 @@ class Linter:
         if check_value is False:
             self.logger.info(
                 "[{}] [{}/{}] (PASS) Application {} is correctly using default config for {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    name,
-                    rule,
+                    self.cloud_name, self.controller_name, self.model_name, name, rule,
                 )
             )
             return True
         self.logger.error(
             "[{}] [{}/{}] (FAIL) Application {} has no manual config for {}.".format(
-                self.cloud_name,
-                self.controller_name,
-                self.model_name,
-                name,
-                rule,
+                self.cloud_name, self.controller_name, self.model_name, name, rule,
             )
         )
         return False
@@ -341,7 +331,9 @@ class Linter:
                 if lint_rules:
                     if "options" in applications[application]:
                         self.check_config(
-                            application, applications[application]["options"], lint_rules
+                            application,
+                            applications[application]["options"],
+                            lint_rules,
                         )
 
     def check_subs(self):

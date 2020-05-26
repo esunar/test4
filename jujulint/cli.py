@@ -67,7 +67,7 @@ class Cli:
         for cloud_name in self.config["clouds"].get():
             self.audit(cloud_name)
         # serialise state
-        if self.clouds:
+        if self.clouds and self.config["output"]["dump"].get():
             self.write_yaml(self.clouds, "all-data.yaml")
 
     def audit(self, cloud_name):
@@ -104,9 +104,10 @@ class Cli:
                     cloud_name, cloud_instance.cloud_state
                 )
             )
-            self.write_yaml(
-                cloud_instance.cloud_state, "{}-state.yaml".format(cloud_name)
-            )
+            if self.config["output"]["dump"].get():
+                self.write_yaml(
+                    cloud_instance.cloud_state, "{}-state.yaml".format(cloud_name)
+                )
             # run audit checks
             cloud_instance.audit()
         else:
@@ -127,9 +128,7 @@ def main():
         manual_file = cli.config["manual-file"].get()
         if "manual-type" in cli.config:
             manual_type = cli.config["manual-type"].get()
-            cli.audit_file(
-                manual_file, cloud_type=manual_type
-            )
+            cli.audit_file(manual_file, cloud_type=manual_type)
         else:
             cli.audit_file(manual_file)
     else:

@@ -45,5 +45,5 @@ setuptools.setup(
     python_requires=">=3.4",
     py_modules=["jujulint"],
     entry_points={"console_scripts": ["juju-lint=jujulint.cli:main"]},
-    setup_requires=['setuptools_scm'],
+    setup_requires=["setuptools_scm"],
 )

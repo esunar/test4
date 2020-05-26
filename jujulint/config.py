@@ -49,6 +49,15 @@ class Config(Configuration):
             dest="output.folder",
         )
         parser.add_argument(
+            "--dump-state",
+            type=str,
+            help=(
+                "Optionally, dump cloud state as YAML into --output-dir."
+                "Use with caution, as dumps will contain sensitve data."
+            ),
+            dest="output.dump",
+        )
+        parser.add_argument(
             "-c",
             "--config",
             default="lint-rules.yaml",

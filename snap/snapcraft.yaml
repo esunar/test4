@@ -12,9 +12,6 @@ confinement: classic
 apps:
   juju-lint:
     command: juju-lint
-    plugs:
-      - network
-      - ssh-keys
 parts:
   juju-lint:
     plugin: python

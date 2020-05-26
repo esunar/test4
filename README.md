@@ -36,7 +36,7 @@ interface in order to grant access to your SSH configuation.
 
 To use a different rules file:
 
-    ./juju-lint -c my-rules.yaml
+    juju-lint -c my-rules.yaml
 
 For all other options, consult `juju-lint --help`
 

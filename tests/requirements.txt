@@ -1,5 +1,4 @@
 # Module requirements
-attrs
 flake8
 flake8-colors
 flake8-docstrings
@@ -11,4 +10,3 @@ pyflakes
 pytest
 pytest-cov
 pytest-html
-pyyaml
