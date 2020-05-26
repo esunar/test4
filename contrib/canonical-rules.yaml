@@ -1,3 +1,49 @@
+kubernetes config:
+ kubernetes-master:
+  authorization-mode:
+   eq: "RBAC,Node"
+ canal:
+  cidr:
+   isset: false
+
+openstack config:
+ neutron-api:
+  path-mtu:
+   eq: 9000
+  global-physnet-mtu:
+   eq: 9000
+ nova-compute:
+  live-migration-permit-auto-converge:
+   eq: true
+  live-migration-permit-post-copy:
+   eq: true
+  cpu-model:
+   isset: true
+ percona-cluster:
+  innodb-buffer-pool-size:
+   gte: 6G
+  max-connections:
+   gte: 2000
+ mysql-innodb-cluster:
+  innodb-buffer-pool-size:
+   gte: 6G
+  max-connections:
+   gte: 2000
+ rabbitmq-server:
+  cluster-partition-handling:
+   eq: "pause_minority"
+ keystone:
+  token-expiration:
+   gte: 86400
+
+config:
+ hacluster:
+  cluster_count:
+   gte: 3
+ ntp:
+  auto_peers:
+   eq: true
+
 subordinates:
  telegraf:
   where: all except prometheus  # and prometheus-ceph-exporter and prometheus-openstack-exporter
