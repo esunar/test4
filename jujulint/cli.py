@@ -67,7 +67,7 @@ class Cli:
         for cloud_name in self.config["clouds"].get():
             self.audit(cloud_name)
         # serialise state
-        if self.clouds and self.config["output"]["dump"].get():
+        if self.clouds:
             self.write_yaml(self.clouds, "all-data.yaml")
 
     def audit(self, cloud_name):
@@ -104,10 +104,9 @@ class Cli:
                     cloud_name, cloud_instance.cloud_state
                 )
             )
-            if self.config["output"]["dump"].get():
-                self.write_yaml(
-                    cloud_instance.cloud_state, "{}-state.yaml".format(cloud_name)
-                )
+            self.write_yaml(
+                cloud_instance.cloud_state, "{}-state.yaml".format(cloud_name)
+            )
             # run audit checks
             cloud_instance.audit()
         else:
@@ -115,9 +114,11 @@ class Cli:
 
     def write_yaml(self, data, file_name):
         """Write collected information to YAML."""
-        folder_name = self.config["output"]["folder"].get()
-        file_handle = open("{}/{}".format(folder_name, file_name), "w")
-        yaml.dump(data, file_handle)
+        if "dump" in self.config["output"]:
+            if self.config["output"]["dump"]:
+                folder_name = self.config["output"]["folder"].get()
+                file_handle = open("{}/{}".format(folder_name, file_name), "w")
+                yaml.dump(data, file_handle)
 
 
 def main():

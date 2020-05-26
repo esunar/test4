@@ -65,13 +65,15 @@ class Config(Configuration):
             dest="rules.file",
         )
         parser.add_argument(
-            "-f",
-            "--cloud-file",
+            "manual-file",
+            metavar="manual-file",
+            nargs='?',
+            type=str,
+            default=None,
             help=(
                 "File to read state from. Supports bundles and status output in YAML format."
                 "Setting this disables collection of data from remote or local clouds configured via config.yaml."
             ),
-            dest="manual-file",
         )
         parser.add_argument(
             "-t",
