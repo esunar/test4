@@ -1,5 +1,39 @@
+---
+config:
+  example-charm:
+    example-setting:
+      eq: true
+
 subordinates:
   telegraf:
     where: all
   landscape-client:
     where: all
+  ntp:
+    where: all
+
+# the below "example" cloud depicts an application running on apache2
+# which relies on mysql and rabbitmq, and should have ntp deployed
+# across all notes. etcd may also be deployed on some machines.
+example mandatory: &example-mandatory-charms
+  - apache2
+
+example mandatory deps: &example-mandatory-deps
+  - rabbitmq-server
+  - mysql
+
+example mandatory subordinates: &example-mandatory-subs
+  - ntp
+
+example optional charms: &example-optional-charms
+  - etcd
+
+example charms: &openstack-charms
+  - *example-mandatory-charms
+  - *example-mandatory-deps
+  - *example-mandatory-subs
+  - *example-optional-charms
+
+known charms:
+  - ubuntu
+  - *example-charms
