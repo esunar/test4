@@ -17,7 +17,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Setuptools packaging metadata for juju-lint."""
 
-import re
 import setuptools
 import warnings
 
@@ -28,9 +27,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="jujulint",
-    use_scm_version={
-            "local_scheme": "node-and-date",
-    },
+    use_scm_version={"local_scheme": "node-and-date"},
     author="Canonical",
     author_email="juju@lists.ubuntu.com",
     description="Linter for Juju models to compare deployments with configurable policy",
@@ -45,7 +42,7 @@ setuptools.setup(
         "Intended Audience :: System Administrators",
     ],
     python_requires=">=3.4",
-    py_modules=["jujulint"],
+    packages=["jujulint"],
     entry_points={"console_scripts": ["juju-lint=jujulint.cli:main"]},
     setup_requires=["setuptools_scm"],
 )

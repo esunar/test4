@@ -19,6 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Lint operations and rule processing engine."""
 import collections
+import os.path
 import pprint
 import re
 
@@ -84,30 +85,34 @@ class Linter:
 
     def read_rules(self):
         """Read and parse rules from YAML, optionally processing provided overrides."""
-        with open(self.filename, "r") as yaml_file:
-            self.lint_rules = yaml.safe_load(yaml_file)
-        if self.overrides:
-            for override in self.overrides.split("#"):
-                (name, where) = override.split(":")
-                self.logger.info(
-                    "[{}] [{}/{}] Overriding {} with {}".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        name,
-                        where,
+        if os.path.isfile(self.filename):
+            with open(self.filename, "r") as yaml_file:
+                self.lint_rules = yaml.safe_load(yaml_file)
+            if self.overrides:
+                for override in self.overrides.split("#"):
+                    (name, where) = override.split(":")
+                    self.logger.info(
+                        "[{}] [{}/{}] Overriding {} with {}".format(
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
+                            name,
+                            where,
+                        )
                     )
+                    self.lint_rules["subordinates"][name] = dict(where=where)
+            self.lint_rules["known charms"] = flatten_list(self.lint_rules["known charms"])
+            self.logger.debug(
+                "[{}] [{}/{}] Lint Rules: {}".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    pprint.pformat(self.lint_rules),
                 )
-                self.lint_rules["subordinates"][name] = dict(where=where)
-        self.lint_rules["known charms"] = flatten_list(self.lint_rules["known charms"])
-        self.logger.debug(
-            "[{}] [{}/{}] Lint Rules: {}".format(
-                self.cloud_name,
-                self.controller_name,
-                self.model_name,
-                pprint.pformat(self.lint_rules),
             )
-        )
+            return True
+        self.logger.error("Rules file {} does not exist.".format(self.filename))
+        return False
 
     def process_subordinates(self, app_d, app_name):
         """Iterate over subordinates and run subordinate checks."""
