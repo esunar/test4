@@ -1,30 +1,24 @@
 ---
-clouds:
-  # an example local Juju-deployed OpenStack
-  cloud1:
-    type: openstack
-    access: local
+# clouds:
+#  an example local Juju-deployed OpenStack
+#  cloud1:
+#   type: openstack
+#   access: local
 
-  # an example remote Juju-deployed OpenStack
-  cloud2:
-    type: openstack
-    access: ssh
-    host: 'ubuntu@openstack.example.fake'
+# an example remote Juju-deployed OpenStack
+#  cloud2:
+#   type: openstack
+#   access: ssh
+#   host: 'ubuntu@openstack.example.fake'
 
-  # an exported bundle
-  yamlfile:
-    type: openstack
-    access: dump
-    file: 'export.yaml'
-
-  # an example remote Juju-deployed OpenStack where
-  # Juju controllers are registered under user 'juju-user
-  # in this example cloud, so we sudo to that user
-  cloud3:
-    type: openstack
-    access: ssh
-    host: 'ubuntu@openstack2.example.fake'
-    sudo: 'juju-user'
+# an example remote Juju-deployed OpenStack where
+# Juju controllers are registered under user 'juju-user
+# in this example cloud, so we sudo to that user
+#  cloud3:
+#   type: openstack
+#   access: ssh
+#   host: 'ubuntu@openstack2.example.fake'
+#   sudo: 'juju-user'
 
 logging:
   level: INFO

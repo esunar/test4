@@ -22,6 +22,7 @@ parts:
     requirements:
       - requirements.txt
     source: .
+    source-type: git
     override-build: |
         snapcraftctl build
         echo "Version: $(python3 setup.py --version)"

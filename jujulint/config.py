@@ -29,8 +29,8 @@ class Config(Configuration):
         """Wrap the initialisation of confuse's Configuration object providing defaults for our application."""
         super().__init__("juju-lint", __name__)
 
-        parser = ArgumentParser(description="Sanity check one or more Juju models")
-        parser.add_argument(
+        self.parser = ArgumentParser(description="Sanity check one or more Juju models")
+        self.parser.add_argument(
             "-l",
             "--log-level",
             type=str,
@@ -39,7 +39,7 @@ class Config(Configuration):
             help="The default log level, valid options are info, warn, error or debug",
             dest="logging.loglevel",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "-d",
             "--output-dir",
             type=str,
@@ -48,7 +48,7 @@ class Config(Configuration):
             help="The folder to use when saving gathered cloud data and lint reports.",
             dest="output.folder",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "--dump-state",
             type=str,
             help=(
@@ -57,14 +57,14 @@ class Config(Configuration):
             ),
             dest="output.dump",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "-c",
             "--config",
             default="lint-rules.yaml",
             help="File to read lint rules from. Defaults to `lint-rules.yaml`",
             dest="rules.file",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "manual-file",
             metavar="manual-file",
             nargs='?',
@@ -75,7 +75,7 @@ class Config(Configuration):
                 "Setting this disables collection of data from remote or local clouds configured via config.yaml."
             ),
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "-t",
             "--cloud-type",
             help=(
@@ -83,13 +83,13 @@ class Config(Configuration):
             ),
             dest="manual-type",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "-o",
             "--override-subordinate",
             dest="override.subordinate",
             help="override lint-rules.yaml, e.g. -o canonical-livepatch:all",
         )
-        parser.add_argument(
+        self.parser.add_argument(
             "--logfile",
             "-L",
             default=None,
@@ -97,5 +97,5 @@ class Config(Configuration):
             dest="logging.file",
         )
 
-        args = parser.parse_args()
+        args = self.parser.parse_args()
         self.set_args(args, dots=True)

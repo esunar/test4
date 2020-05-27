@@ -21,8 +21,10 @@ from jujulint.config import Config
 from jujulint.lint import Linter
 from jujulint.logging import Logger
 from jujulint.openstack import OpenStack
+import os.path
 import pkg_resources
 import yaml
+import sys
 
 
 class Cli:
@@ -35,9 +37,16 @@ class Cli:
         self.config = Config()
         self.logger = Logger(self.config["logging"]["loglevel"].get())
         self.version = pkg_resources.require("jujulint")[0].version
-        self.lint_rules = "{}/{}".format(
-            self.config.config_dir(), self.config["rules"]["file"].get()
-        )
+        rules_file = self.config["rules"]["file"].get()
+        # handle absolute path provided
+        if os.path.isfile(rules_file):
+            self.lint_rules = rules_file
+        elif os.path.isfile("{}/{}".format(self.config.config_dir(), rules_file)):
+            # default to relative path
+            self.lint_rules = "{}/{}".format(self.config.config_dir(), rules_file)
+        else:
+            self.logger.error("Cloud not locate rules file {}".format(rules_file))
+            sys.exit(1)
 
     def startup_message(self):
         """Print startup message to log."""
@@ -45,13 +54,19 @@ class Cli:
             (
                 "juju-lint version {} starting...\n"
                 "\t* Config directory: {}\n"
+                "\t* Rules file: {}\n"
                 "\t* Log level: {}\n"
             ).format(
                 self.version,
                 self.config.config_dir(),
+                self.lint_rules,
                 self.config["logging"]["loglevel"].get(),
             )
         )
+
+    def usage(self):
+        """Print program usage."""
+        self.config.parser.print_help()
 
     def audit_file(self, filename, cloud_type=None):
         """Directly audit a YAML file."""
@@ -132,5 +147,7 @@ def main():
             cli.audit_file(manual_file, cloud_type=manual_type)
         else:
             cli.audit_file(manual_file)
-    else:
+    elif "clouds" in cli.config:
         cli.audit_all()
+    else:
+        cli.usage()
