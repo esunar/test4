@@ -32,7 +32,7 @@ class Logger:
         if not len(self.logger.handlers):
             format_string = "%(log_color)s%(asctime)s [%(levelname)s] %(message)s"
             date_format = "%Y-%m-%d %H:%M:%S"
-            colour_formatter = colorlog.ColoredFormatter(
+            colour_formatter = colorlog.TTYColoredFormatter(
                 format_string,
                 datefmt=date_format,
                 log_colors={
@@ -42,6 +42,7 @@ class Logger:
                     "ERROR": "red",
                     "CRITICAL": "red,bg_white",
                 },
+                stream=sys.stdout,
             )
             console = colorlog.StreamHandler()
             console.setFormatter(colour_formatter)
