@@ -7,6 +7,15 @@ kubernetes config:
    isset: false
 
 openstack config:
+ ceph-radosgw:
+  ceph-osd-replication-count:
+   eq: 3
+ cinder-ceph:
+  ceph-osd-replication-count:
+   eq: 3
+ glance:
+  ceph-osd-replication-count:
+   eq: 3
  neutron-api:
   path-mtu:
    eq: 9000
@@ -19,7 +28,14 @@ openstack config:
    eq: true
   cpu-model:
    isset: true
+  ceph-osd-replication-count:
+   eq: 3
  percona-cluster:
+  innodb-buffer-pool-size:
+   gte: 6G
+  max-connections:
+   gte: 2000
+ mysql-innodb-cluster:
   innodb-buffer-pool-size:
    gte: 6G
   max-connections:
@@ -35,6 +51,9 @@ openstack config:
  keystone:
   token-expiration:
    gte: 86400
+ sysconfig:
+   governor:
+    eq: "performance"
 
 config:
  hacluster:
