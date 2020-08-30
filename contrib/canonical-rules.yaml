@@ -88,8 +88,16 @@ operations mandatory: &operations-mandatory-charms
  - graylog
  - landscape-server
  - nagios
- - openstack-service-checks
  - prometheus2
+
+operations optional: &operations-optional-charms
+ - infra-node
+ - hw-health
+ - cloudstats
+
+operations openstack mandatory: &operations-openstack-mandatory-charms
+ - openstack-service-checks
+ - prometheus-libvirt-exporter
  - prometheus-openstack-exporter
  - prometheus-ceph-exporter
 
@@ -107,10 +115,19 @@ operations subordinates: &operations-mandatory-subs
  - telegraf
  - thruk-agent
 
+operations optional subordinates: &operations-optional-subs
+ - policy-routing
+ - bcache-tuning
+ - sysconfig
+ - logrotate-charm
+
 operations charms: &operations-charms
  - *operations-mandatory-charms
  - *operations-mandatory-deps
  - *operations-mandatory-subs
+ - *operations-optional-charms
+ - *operations-optional-subs
+ - *operations-openstack-mandatory-charms
 
 openstack mandatory: &openstack-mandatory-charms
  - ceilometer
