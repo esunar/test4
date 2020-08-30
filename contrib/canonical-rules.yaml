@@ -107,10 +107,14 @@ operations subordinates: &operations-mandatory-subs
  - telegraf
  - thruk-agent
 
+operations optional subordinates: &operations-optional-subs
+ - policy-routing
+
 operations charms: &operations-charms
  - *operations-mandatory-charms
  - *operations-mandatory-deps
  - *operations-mandatory-subs
+ - *operations-optional-subs
 
 openstack mandatory: &openstack-mandatory-charms
  - ceilometer
