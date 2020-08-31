@@ -569,6 +569,13 @@ class Linter:
                             self.controller_name,
                         )
                     )
+            for charm in self.lint_rules["operations openstack mandatory"]:
+                if charm not in self.model.charms:
+                    self.logger.error(
+                        "[{}] Ops charm '{}' in OpenStack model {} on controller {} not found".format(
+                            self.cloud_name, charm, self.model_name, self.controller_name
+                        )
+                    )
         elif self.cloud_type == "kubernetes":
             for charm in self.lint_rules["kubernetes mandatory"]:
                 if charm not in self.model.charms:
