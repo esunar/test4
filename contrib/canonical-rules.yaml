@@ -66,7 +66,6 @@ config:
 subordinates:
  telegraf:
   where: all except prometheus  # and prometheus-ceph-exporter and prometheus-openstack-exporter
-  host-suffixes: [prometheus]
  landscape-client:
   where: all except landscape-server
  filebeat:
