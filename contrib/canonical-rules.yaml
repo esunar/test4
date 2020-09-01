@@ -155,21 +155,27 @@ openstack mandatory subordinates: &openstack-mandatory-subs
 
 openstack optional charms: &openstack-optional-charms
  - aodh
+ - barbican
+ - barbican-vault
  - ceph-radosgw
+ - cinder-backup
  - designate
  - designate-bind
+ - easyrsa
+ - etcd
  - glance-simplestreams-sync
  - glance-sync-slave
  - gnocchi
  - keystone-ldap
  - mongodb # Optional since Gnochii
  - neutron-gateway
+ - octavia
+ - octavia-dashboard
+ - octavia-diskimage-retrofit
+ - placement
  - swift-proxy
  - swift-storage
- - cinder-backup
  - vault
- - etcd
- - easyrsa
 
 cisco-aci-charms: &cisco-aci-charms
  - neutron-api-plugin-aci
