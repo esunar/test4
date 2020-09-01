@@ -1,6 +1,6 @@
 ---
 name: juju-lint
-base: core20
+base: core18
 summary: Linter for Juju models to compare deployments with configurable policy
 adopt-info: juju-lint
 description: |
