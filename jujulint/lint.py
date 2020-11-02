@@ -458,6 +458,17 @@ class Linter:
                             suffixes,
                         )
                     )
+                    exceptions = []
+                    if "exceptions" in self.lint_rules["subordinates"][required_sub]:
+                        exceptions = self.lint_rules["subordinates"][required_sub]["exceptions"]
+                        self.logger.debug(
+                            "[{}] [{}/{}] -> exceptions == {}".format(
+                                self.cloud_name,
+                                self.controller_name,
+                                self.model_name,
+                                exceptions,
+                            )
+                        )
                     found = False
                     for suffix in suffixes:
                         looking_for = "{}-{}".format(required_sub, suffix)
@@ -484,6 +495,18 @@ class Linter:
                                         self.controller_name,
                                         self.model_name,
                                         sub,
+                                    )
+                                )
+                                found = True
+                    if not found:
+                        for exception in exceptions:
+                            if exception in apps:
+                                self.logger.debug(
+                                    "[{}] [{}/{}]-> continuing as found exception: {}".format(
+                                        self.cloud_name,
+                                        self.controller_name,
+                                        self.model_name,
+                                        exception,
                                     )
                                 )
                                 found = True
