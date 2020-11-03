@@ -73,9 +73,10 @@ subordinates:
  canonical-livepatch:
   where: host only
  nrpe:
-  where: container aware  # and except nagios
+  where: container aware
   host-suffixes: [host, physical, guest]
   container-suffixes: [lxd, container]
+  exceptions: [nagios]
  ntp:
   where: host only # You don't want NTP in a container duelling with ntp in the host
  thruk-agent:
@@ -99,6 +100,7 @@ operations openstack mandatory: &operations-openstack-mandatory-charms
  - prometheus-libvirt-exporter
  - prometheus-openstack-exporter
  - prometheus-ceph-exporter
+ - prometheus-grok-exporter
 
 operations mandatory dependencies: &operations-mandatory-deps
  - postgresql
@@ -119,6 +121,8 @@ operations optional subordinates: &operations-optional-subs
  - bcache-tuning
  - sysconfig
  - logrotate-charm
+ - advanced-routing
+ - rsyslog-forwarder-ha
 
 operations charms: &operations-charms
  - *operations-mandatory-charms
@@ -176,10 +180,21 @@ openstack optional charms: &openstack-optional-charms
  - swift-proxy
  - swift-storage
  - vault
+ - cinder-lvm
 
 cisco-aci-charms: &cisco-aci-charms
  - neutron-api-plugin-aci
  - openstack-dashboard-plugin-gbp
+
+ovn-charms: &ovn-charms
+ - ovn-central
+ - ovn-chassis
+ - neutron-api-plugin-ovn
+
+masakari-charms: &masakari-charms
+ - masakari
+ - masakari-monitors
+ - pacemaker-remote
 
 openstack charms: &openstack-charms
  - *openstack-mandatory-charms
@@ -187,6 +202,8 @@ openstack charms: &openstack-charms
  - *openstack-mandatory-subs
  - *openstack-optional-charms
  - *cisco-aci-charms
+ - *ovn-charms
+ - *masakari-charms
 
 known charms:
  - ubuntu
