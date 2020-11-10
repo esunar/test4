@@ -18,6 +18,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Utility library for all helpful functions this project uses."""
 
+import re
+
+
+class InvalidCharmNameError(Exception):
+    """Represents an invalid charm name being processed."""
+
+    pass
+
 
 def flatten_list(lumpy_list):
     """Flatten a list potentially containing other lists."""
@@ -36,3 +44,14 @@ def is_container(machine):
         return True
     else:
         return False
+
+
+def extract_charm_name(charm):
+    match = re.match(
+        r"^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
+    )
+    if not match:
+        raise InvalidCharmNameError(
+            "charm name '{}' is invalid".format(charm)
+        )
+    return match.group(1)

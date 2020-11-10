@@ -28,19 +28,13 @@ import yaml
 from attr import attrs, attrib
 import attr
 
-from jujulint.util import flatten_list, is_container
+from jujulint.util import flatten_list, is_container, extract_charm_name
 from jujulint.logging import Logger
 
 # TODO:
 #  - tests
 #  - missing relations for mandatory subordinates
 #  - info mode, e.g. num of machines, version (e.g. look at ceph), architecture
-
-
-class InvalidCharmNameError(Exception):
-    """Represents an invalid charm name being processed."""
-
-    pass
 
 
 @attrs
@@ -177,7 +171,7 @@ class Linter:
             current = self.atoi(config[rule])
             expected = self.atoi(check_value)
             if current >= expected:
-                self.logger.info(
+                self.logger.debug(
                     "[{}] [{}/{}] (PASS) Application {} has config for {} which is >= {}: {}.".format(
                         self.cloud_name,
                         self.controller_name,
@@ -217,7 +211,7 @@ class Linter:
         """Check if value is set per rule constraints."""
         if rule in config:
             if check_value is True:
-                self.logger.info(
+                self.logger.debug(
                     "[{}] [{}/{}] (PASS) Application {} correctly has manual config for {}: {}.".format(
                         self.cloud_name,
                         self.controller_name,
@@ -240,7 +234,7 @@ class Linter:
             )
             return False
         if check_value is False:
-            self.logger.info(
+            self.logger.debug(
                 "[{}] [{}/{}] (PASS) Application {} is correctly using default config for {}.".format(
                     self.cloud_name, self.controller_name, self.model_name, name, rule,
                 )
@@ -262,7 +256,7 @@ class Linter:
             except re.error:
                 match = check_value == config[rule]
             if match:
-                self.logger.info(
+                self.logger.debug(
                     "[{}] [{}/{}] Application {} has correct setting for {}: Expected {}, got {}.".format(
                         self.cloud_name,
                         self.controller_name,
@@ -283,6 +277,18 @@ class Linter:
                     rule,
                     check_value,
                     config[rule],
+                )
+            )
+            return False
+        else:
+            self.logger.warn(
+                "[{}] [{}/{}] When checking if application {} has no config for {}, can't determine if == {}.".format(
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
+                    check_value,
                 )
             )
 
@@ -319,27 +325,37 @@ class Linter:
         for application in applications.keys():
             # look for config rules for this application
             lint_rules = []
-            if "charm-name" in applications[application]:
-                charm_name = applications[application]["charm-name"]
-                if "config" in self.lint_rules:
-                    if charm_name in self.lint_rules["config"]:
-                        lint_rules = self.lint_rules["config"][charm_name].items()
+            if "charm" not in applications[application]:
+                self.logger.warn(
+                    "[{}] [{}/{}] Application {} has no charm.".format(
+                        self.cloud_name,
+                        self.controller_name,
+                        self.model_name,
+                        application,
+                    )
+                )
+                continue
 
-                if self.cloud_type == "openstack":
-                    # process openstack config rules
-                    if "openstack config" in self.lint_rules:
-                        if charm_name in self.lint_rules["openstack config"]:
-                            lint_rules.extend(
-                                self.lint_rules["openstack config"][charm_name].items()
-                            )
+            charm_name = extract_charm_name(applications[application]["charm"])
+            if "config" in self.lint_rules:
+                if charm_name in self.lint_rules["config"]:
+                    lint_rules = self.lint_rules["config"][charm_name].items()
 
-                if lint_rules:
-                    if "options" in applications[application]:
-                        self.check_config(
-                            application,
-                            applications[application]["options"],
-                            lint_rules,
+            if self.cloud_type == "openstack":
+                # process openstack config rules
+                if "openstack config" in self.lint_rules:
+                    if charm_name in self.lint_rules["openstack config"]:
+                        lint_rules.extend(
+                            self.lint_rules["openstack config"][charm_name].items()
                         )
+
+            if lint_rules:
+                if "options" in applications[application]:
+                    self.check_config(
+                        application,
+                        applications[application]["options"],
+                        lint_rules,
+                    )
 
     def check_subs(self):
         """Check the subordinates in the model."""
@@ -675,17 +691,9 @@ class Linter:
         """Process applications in the model, validating and normalising the names."""
         for app in applications:
             if "charm" in applications[app]:
-                charm = applications[app]["charm"]
-                match = re.match(
-                    r"^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
-                )
-                if not match:
-                    raise InvalidCharmNameError(
-                        "charm name '{}' is invalid".format(charm)
-                    )
-                charm = match.group(1)
-                self.model.charms.add(charm)
-                self.model.app_to_charm[app] = charm
+                charm_name = extract_charm_name(applications[app]["charm"])
+                self.model.charms.add(charm_name)
+                self.model.app_to_charm[app] = charm_name
             else:
                 self.logger.error(
                     "[{}] [{}/{}] Could not detect which charm is used for application {}".format(
@@ -895,23 +903,24 @@ class Linter:
             self.check_subs()
             self.check_charms()
 
-            if parsed_yaml.get("machines"):
+            if "relations" not in parsed_yaml:
                 self.map_machines_to_az(parsed_yaml["machines"])
                 self.check_azs(parsed_yaml[applications])
                 self.check_statuses(parsed_yaml, applications)
             else:
                 self.logger.warn(
                     (
-                        "[{}] [{}/{}] No machine status present in model."
-                        "possibly a bundle without status, skipping AZ checks"
+                        "[{}] [{}/{}] Relations data found; assuming a bundle and "
+                        "skipping AZ and status checks."
                     ).format(
                         self.cloud_name, self.model_name, self.controller_name,
                     )
                 )
 
             self.results()
-        self.logger.warn(
-            "[{}] [{}/{}] Model contains no applications, skipping.".format(
-                self.cloud_name, self.controller_name, self.model_name,
+        else:
+            self.logger.warn(
+                "[{}] [{}/{}] Model contains no applications, skipping.".format(
+                    self.cloud_name, self.controller_name, self.model_name,
+                )
             )
-        )
