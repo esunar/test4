@@ -81,6 +81,10 @@ subordinates:
   where: host only # You don't want NTP in a container duelling with ntp in the host
  thruk-agent:
   where: on nagios
+ hw-health:
+  where: host only
+ logrotate:
+  where: all
 
 operations mandatory: &operations-mandatory-charms
  - elasticsearch
@@ -92,7 +96,6 @@ operations mandatory: &operations-mandatory-charms
 
 operations optional: &operations-optional-charms
  - infra-node
- - hw-health
  - cloudstats
 
 operations openstack mandatory: &operations-openstack-mandatory-charms
@@ -115,6 +118,8 @@ operations subordinates: &operations-mandatory-subs
  - ntp
  - telegraf
  - thruk-agent
+ - hw-health
+ - logrotated
 
 operations optional subordinates: &operations-optional-subs
  - policy-routing
@@ -196,6 +201,12 @@ masakari-charms: &masakari-charms
  - masakari-monitors
  - pacemaker-remote
 
+trilio-charms: &trilio-charms
+ - trilio-dm-api
+ - trilio-horizon-plugin
+ - trilio-data-mover
+ - trilio-wlm
+
 openstack charms: &openstack-charms
  - *openstack-mandatory-charms
  - *openstack-mandatory-deps
@@ -204,6 +215,7 @@ openstack charms: &openstack-charms
  - *cisco-aci-charms
  - *ovn-charms
  - *masakari-charms
+ - *trilio-charms
 
 known charms:
  - ubuntu
