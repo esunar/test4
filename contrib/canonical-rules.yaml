@@ -62,6 +62,9 @@ config:
  ntp:
   auto_peers:
    eq: true
+ landscape-client:
+  disable-unattended-upgrades:
+   eq: true
 
 subordinates:
  telegraf:
