@@ -83,7 +83,7 @@ subordinates:
   where: on nagios
  hw-health:
   where: host only
- logrotate:
+ logrotated:
   where: all
 
 operations mandatory: &operations-mandatory-charms
