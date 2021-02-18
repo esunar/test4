@@ -57,6 +57,11 @@ config:
  ntp:
   auto_peers:
    eq: true
+ nrpe:
+  lacp_bonds:
+   isset: true
+  netlinks:
+   isset: true
  landscape-client:
   disable-unattended-upgrades:
    eq: true
