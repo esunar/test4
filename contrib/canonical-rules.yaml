@@ -1,3 +1,4 @@
+---
 kubernetes config:
  kubernetes-master:
   authorization-mode:
@@ -36,11 +37,6 @@ openstack config:
    gte: 6G
   max-connections:
    gte: 2000
- mysql-innodb-cluster:
-  innodb-buffer-pool-size:
-   gte: 6G
-  max-connections:
-   gte: 2000
  rabbitmq-server:
   cluster-partition-handling:
    eq: "pause_minority"
@@ -48,8 +44,8 @@ openstack config:
   token-expiration:
    gte: 86400
  sysconfig:
-   governor:
-    eq: "performance"
+  governor:
+   eq: "performance"
  ovn-central:
   ovsdb-server-election-timer:
    gte: 4
@@ -67,7 +63,8 @@ config:
 
 subordinates:
  telegraf:
-  where: all except prometheus  # and prometheus-ceph-exporter and prometheus-openstack-exporter
+  where: all except prometheus
+  # and prometheus-ceph-exporter and prometheus-openstack-exporter
  landscape-client:
   where: all except landscape-server
  filebeat:
@@ -80,12 +77,13 @@ subordinates:
   container-suffixes: [lxd, container]
   exceptions: [nagios]
  ntp:
-  where: host only # You don't want NTP in a container duelling with ntp in the host
+  # You don't want NTP in a container dueling with ntp in the host
+  where: host only
  thruk-agent:
   where: on nagios
  hw-health:
   where: host only
- logrotated:
+ logrotate:
   where: all
 
 operations mandatory: &operations-mandatory-charms
@@ -178,7 +176,7 @@ openstack optional charms: &openstack-optional-charms
  - glance-sync-slave
  - gnocchi
  - keystone-ldap
- - mongodb # Optional since Gnochii
+ - mongodb  # Optional since Gnocchi
  - neutron-gateway
  - octavia
  - octavia-dashboard
