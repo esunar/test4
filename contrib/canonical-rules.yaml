@@ -56,7 +56,7 @@ config:
    gte: 3
  ntp:
   auto_peers:
-   eq: true
+   eq: false
  nrpe:
   lacp_bonds:
    isset: true
