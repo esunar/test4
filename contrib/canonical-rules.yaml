@@ -22,10 +22,6 @@ openstack config:
   global-physnet-mtu:
    eq: 9000
  nova-compute:
-  live-migration-permit-auto-converge:
-   eq: true
-  live-migration-permit-post-copy:
-   eq: true
   cpu-model:
    isset: true
   ceph-osd-replication-count:
