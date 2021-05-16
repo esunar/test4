@@ -67,7 +67,7 @@ class Config(Configuration):
         self.parser.add_argument(
             "manual-file",
             metavar="manual-file",
-            nargs='?',
+            nargs="?",
             type=str,
             default=None,
             help=(

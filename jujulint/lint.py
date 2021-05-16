@@ -95,7 +95,9 @@ class Linter:
                         )
                     )
                     self.lint_rules["subordinates"][name] = dict(where=where)
-            self.lint_rules["known charms"] = flatten_list(self.lint_rules["known charms"])
+            self.lint_rules["known charms"] = flatten_list(
+                self.lint_rules["known charms"]
+            )
             self.logger.debug(
                 "[{}] [{}/{}] Lint Rules: {}".format(
                     self.cloud_name,
@@ -236,13 +238,21 @@ class Linter:
         if check_value is False:
             self.logger.debug(
                 "[{}] [{}/{}] (PASS) Application {} is correctly using default config for {}.".format(
-                    self.cloud_name, self.controller_name, self.model_name, name, rule,
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
+                    rule,
                 )
             )
             return True
         self.logger.error(
             "[{}] [{}/{}] (FAIL) Application {} has no manual config for {}.".format(
-                self.cloud_name, self.controller_name, self.model_name, name, rule,
+                self.cloud_name,
+                self.controller_name,
+                self.model_name,
+                name,
+                rule,
             )
         )
         return False
@@ -440,13 +450,17 @@ class Linter:
                         continue
                     self.logger.debug(
                         "[{}] [{}/{}] ... and we are a host, will fallthrough".format(
-                            self.cloud_name, self.controller_name, self.model_name,
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
                         )
                     )
                 elif where == "all or nothing" and required_sub not in all_or_nothing:
                     self.logger.debug(
                         "[{}] [{}/{}] requirement is 'all or nothing' and was 'nothing'.".format(
-                            self.cloud_name, self.controller_name, self.model_name,
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
                         )
                     )
                     continue
@@ -455,7 +469,9 @@ class Linter:
                 elif where == "container aware":
                     self.logger.debug(
                         "[{}] [{}/{}] requirement is 'container aware'.".format(
-                            self.cloud_name, self.controller_name, self.model_name,
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
                         )
                     )
                     if is_container(machine):
@@ -476,7 +492,9 @@ class Linter:
                     )
                     exceptions = []
                     if "exceptions" in self.lint_rules["subordinates"][required_sub]:
-                        exceptions = self.lint_rules["subordinates"][required_sub]["exceptions"]
+                        exceptions = self.lint_rules["subordinates"][required_sub][
+                            "exceptions"
+                        ]
                         self.logger.debug(
                             "[{}] [{}/{}] -> exceptions == {}".format(
                                 self.cloud_name,
@@ -529,14 +547,18 @@ class Linter:
                     if not found:
                         self.logger.debug(
                             "[{}] [{}/{}] -> NOT FOUND".format(
-                                self.cloud_name, self.controller_name, self.model_name,
+                                self.cloud_name,
+                                self.controller_name,
+                                self.model_name,
                             )
                         )
                         for app in self.model.apps_on_machines[machine]:
                             self.model.missing_subs[required_sub].add(app)
                     self.logger.debug(
                         "[{}] [{}/{}] -> continue-ing back out...".format(
-                            self.cloud_name, self.controller_name, self.model_name,
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
                         )
                     )
                     continue
@@ -552,7 +574,9 @@ class Linter:
                     )
                 self.logger.debug(
                     "[{}] [{}/{}] requirement is 'all' OR we fell through.".format(
-                        self.cloud_name, self.controller_name, self.model_name,
+                        self.cloud_name,
+                        self.controller_name,
+                        self.model_name,
                     )
                 )
                 if required_sub not in present_subs:
@@ -567,7 +591,9 @@ class Linter:
                             continue
                     self.logger.debug(
                         "[{}] [{}/{}] not found.".format(
-                            self.cloud_name, self.controller_name, self.model_name,
+                            self.cloud_name,
+                            self.controller_name,
+                            self.model_name,
                         )
                     )
                     for app in self.model.apps_on_machines[machine]:
@@ -612,7 +638,10 @@ class Linter:
                 if charm not in self.model.charms:
                     self.logger.error(
                         "[{}] Ops charm '{}' in OpenStack model {} on controller {} not found".format(
-                            self.cloud_name, charm, self.model_name, self.controller_name
+                            self.cloud_name,
+                            charm,
+                            self.model_name,
+                            self.controller_name,
                         )
                     )
         elif self.cloud_type == "kubernetes":
@@ -656,7 +685,9 @@ class Linter:
         if self.model.duelling_subs:
             self.logger.error(
                 "[{}] [{}/{}] following subordinates where found on machines more than once:".format(
-                    self.cloud_name, self.controller_name, self.model_name,
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
                 )
             )
             for sub in self.model.duelling_subs:
@@ -782,7 +813,10 @@ class Linter:
         else:
             self.logger.warn(
                 "[{}] [{}/{}] Could not determine appropriate status key for {}.".format(
-                    self.cloud_name, self.controller_name, self.model_name, name,
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
+                    name,
                 )
             )
 
@@ -913,7 +947,9 @@ class Linter:
                         "[{}] [{}/{}] Relations data found; assuming a bundle and "
                         "skipping AZ and status checks."
                     ).format(
-                        self.cloud_name, self.model_name, self.controller_name,
+                        self.cloud_name,
+                        self.model_name,
+                        self.controller_name,
                     )
                 )
 
@@ -921,6 +957,8 @@ class Linter:
         else:
             self.logger.warn(
                 "[{}] [{}/{}] Model contains no applications, skipping.".format(
-                    self.cloud_name, self.controller_name, self.model_name,
+                    self.cloud_name,
+                    self.controller_name,
+                    self.model_name,
                 )
             )
