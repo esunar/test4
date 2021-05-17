@@ -16,7 +16,7 @@ def test_flatten_list(utils):
     assert flattened_list == utils.flatten_list(unflattened_list)
 
 
-def test_map_charms(lint):
+def test_map_charms(lint, utils):
     """Test the charm name validation code."""
     applications = {
         "test-app-1": {"charm": "cs:~USER/SERIES/TEST-CHARM12-123"},
@@ -32,5 +32,5 @@ def test_map_charms(lint):
     applications = {
         "test-app1": {"charm": "cs:invalid-charm$"},
     }
-    with pytest.raises(jujulint.lint.InvalidCharmNameError):
+    with pytest.raises(utils.InvalidCharmNameError):
         lint.map_charms(applications)
