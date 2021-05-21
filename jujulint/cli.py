@@ -21,6 +21,7 @@ from jujulint.config import Config
 from jujulint.lint import Linter
 from jujulint.logging import Logger
 from jujulint.openstack import OpenStack
+import logging
 import os.path
 import pkg_resources
 import yaml
@@ -36,6 +37,11 @@ class Cli:
         """Create new CLI and configure runtime environment."""
         self.config = Config()
         self.logger = Logger(self.config["logging"]["loglevel"].get())
+        self.output_format = self.config["format"].get()
+
+        # disable logging for non-text output formats
+        if self.output_format != "text":
+            logging.disable(level=logging.CRITICAL)
 
         # get the version of the current package if available
         # this will fail if not running from an installed package
@@ -79,7 +85,12 @@ class Cli:
     def audit_file(self, filename, cloud_type=None):
         """Directly audit a YAML file."""
         self.logger.debug("Starting audit of file {}".format(filename))
-        linter = Linter(filename, self.lint_rules, cloud_type=cloud_type,)
+        linter = Linter(
+            filename,
+            self.lint_rules,
+            cloud_type=cloud_type,
+            output_format=self.output_format,
+        )
         linter.read_rules()
         self.logger.info("[{}] Linting manual file...".format(filename))
         linter.lint_yaml_file(filename)
