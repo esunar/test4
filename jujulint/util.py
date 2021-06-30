@@ -48,7 +48,7 @@ def is_container(machine):
 
 def extract_charm_name(charm):
     match = re.match(
-        r"^(?:\w+:)?(?:~[\w-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
+        r"^(?:\w+:)?(?:~[\w\.-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
     )
     if not match:
         raise InvalidCharmNameError(
