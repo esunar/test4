@@ -19,6 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Lint operations and rule processing engine."""
 import collections
+import json
 import os.path
 import pprint
 import re
@@ -65,6 +66,7 @@ class Linter:
         model_name="manual",
         overrides=None,
         cloud_type=None,
+        output_format="text",
     ):
         """Instantiate linter."""
         self.logger = Logger()
@@ -76,6 +78,19 @@ class Linter:
         self.cloud_type = cloud_type
         self.controller_name = controller_name
         self.model_name = model_name
+
+        # output
+        self.output_format = output_format
+        self.output_collector = {
+            "name": name,
+            "controller": controller_name,
+            "model": model_name,
+            "rules": filename,
+            "errors": [],
+        }
+
+        # collect errors only for non-text output (e.g. json)
+        self.collect_errors = True if self.output_format != "text" else False
 
     def read_rules(self):
         """Read and parse rules from YAML, optionally processing provided overrides."""
@@ -138,6 +153,7 @@ class Linter:
                 if sub in self.model.subs_on_machines[machine]:
                     self.model.duelling_subs.setdefault(sub, set())
                     self.model.duelling_subs[sub].add(machine)
+                self.model.subs_on_machines[machine].add(sub)
             self.model.subs_on_machines[machine] = (
                 set(subordinates) | self.model.subs_on_machines[machine]
             )
@@ -146,7 +162,7 @@ class Linter:
 
         return
 
-    def atoi(val):
+    def atoi(self, val):
         """Deal with complex number representations as strings, returning a number."""
         if type(val) != str:
             return val
@@ -185,16 +201,21 @@ class Linter:
                     )
                 )
                 return True
-            self.logger.error(
-                "[{}] [{}/{}] (FAIL) Application {} has config for {} which is less than {}: {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    name,
-                    rule,
-                    check_value,
-                    config[rule],
-                )
+
+            actual_value = config[rule]
+            self.handle_error(
+                {
+                    "id": "config-gte-check",
+                    "tags": ["config", "gte"],
+                    "description": "Checks for config condition 'gte'",
+                    "application": name,
+                    "rule": rule,
+                    "expected_value": check_value,
+                    "actual_value": actual_value,
+                    "message": "Application {} has config for {} which is less than {}: {}.".format(
+                        name, rule, check_value, actual_value
+                    ),
+                }
             )
             return False
         self.logger.warn(
@@ -224,15 +245,19 @@ class Linter:
                     )
                 )
                 return True
-            self.logger.error(
-                "[{}] [{}/{}] (FAIL) Application {} has manual config for {}: {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    name,
-                    rule,
-                    config[rule],
-                )
+            actual_value = config[rule]
+            self.handle_error(
+                {
+                    "id": "config-isset-check-false",
+                    "tags": ["config", "isset"],
+                    "description": "Checks for config condition 'isset'",
+                    "application": name,
+                    "rule": rule,
+                    "actual_value": actual_value,
+                    "message": "Application {} has manual config for {}: {}.".format(
+                        name, rule, actual_value
+                    ),
+                }
             )
             return False
         if check_value is False:
@@ -246,14 +271,17 @@ class Linter:
                 )
             )
             return True
-        self.logger.error(
-            "[{}] [{}/{}] (FAIL) Application {} has no manual config for {}.".format(
-                self.cloud_name,
-                self.controller_name,
-                self.model_name,
-                name,
-                rule,
-            )
+        self.handle_error(
+            {
+                "id": "config-isset-check-true",
+                "tags": ["config", "isset"],
+                "description": "Checks for config condition 'isset' true",
+                "application": name,
+                "rule": rule,
+                "message": "Application {} has no manual config for {}.".format(
+                    name, rule
+                ),
+            }
         )
         return False
 
@@ -278,16 +306,20 @@ class Linter:
                     )
                 )
                 return True
-            self.logger.error(
-                "[{}] [{}/{}] Application {} has incorrect setting for {}: Expected {}, got {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    name,
-                    rule,
-                    check_value,
-                    config[rule],
-                )
+            actual_value = config[rule]
+            self.handle_error(
+                {
+                    "id": "config-eq-check",
+                    "tags": ["config", "eq"],
+                    "description": "Checks for config condition 'eq'",
+                    "application": name,
+                    "rule": rule,
+                    "expected_value": check_value,
+                    "actual_value": actual_value,
+                    "message": "Application {} has incorrect setting for {}: Expected {}, got {}.".format(
+                        name, rule, check_value, actual_value
+                    ),
+                }
             )
             return False
         else:
@@ -317,7 +349,7 @@ class Linter:
                 elif check_op == "eq":
                     self.eq(name, check_value, rule, config)
                 elif check_op == "gte":
-                    self.eq(name, check_value, rule, config)
+                    self.gte(name, check_value, rule, config)
                 else:
                     self.logger.warn(
                         "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
@@ -331,7 +363,7 @@ class Linter:
                     )
 
     def check_configuration(self, applications):
-        """Check applicaton configs in the model."""
+        """Check application configs in the model."""
         for application in applications.keys():
             # look for config rules for this application
             lint_rules = []
@@ -610,113 +642,154 @@ class Linter:
         """Check we recognise the charms which are in the model."""
         for charm in self.model.charms:
             if charm not in self.lint_rules["known charms"]:
-                self.logger.error(
-                    "[{}] Charm '{}' in model {} on controller {} not recognised".format(
-                        self.cloud_name, charm, self.model_name, self.controller_name
-                    )
+                self.handle_error(
+                    {
+                        "id": "unrecognised-charm",
+                        "tags": ["charm", "unrecognised"],
+                        "description": "An unrecognised charm is present in the model",
+                        "charm": charm,
+                        "message": "Charm '{}' not recognised".format(charm),
+                    }
                 )
         # Then look for charms we require
         for charm in self.lint_rules["operations mandatory"]:
             if charm not in self.model.charms:
-                self.logger.error(
-                    "[{}] Ops charm '{}' in model {} on controller {} not found".format(
-                        self.cloud_name, charm, self.model_name, self.controller_name
-                    )
+                self.handle_error(
+                    {
+                        "id": "ops-charm-missing",
+                        "tags": ["missing", "ops", "charm", "mandatory", "principal"],
+                        "description": "An Ops charm is missing",
+                        "charm": charm,
+                        "message": "Ops charm '{}' is missing".format(charm),
+                    }
                 )
         if self.cloud_type == "openstack":
             for charm in self.lint_rules["openstack mandatory"]:
                 if charm not in self.model.charms:
-                    self.logger.error(
-                        "[{}] OpenStack charm '{}' in model {} on controller {} not found".format(
-                            self.cloud_name,
-                            charm,
-                            self.model_name,
-                            self.controller_name,
-                        )
+                    self.handle_error(
+                        {
+                            "id": "openstack-charm-missing",
+                            "tags": [
+                                "missing",
+                                "openstack",
+                                "charm",
+                                "mandatory",
+                                "principal",
+                            ],
+                            "description": "An Openstack charm is missing",
+                            "charm": charm,
+                            "message": "Openstack charm '{}' is missing".format(charm),
+                        }
                     )
             for charm in self.lint_rules["operations openstack mandatory"]:
                 if charm not in self.model.charms:
-                    self.logger.error(
-                        "[{}] Ops charm '{}' in OpenStack model {} on controller {} not found".format(
-                            self.cloud_name,
-                            charm,
-                            self.model_name,
-                            self.controller_name,
-                        )
+                    self.handle_error(
+                        {
+                            "id": "openstack-ops-charm-missing",
+                            "tags": [
+                                "missing",
+                                "openstack",
+                                "ops",
+                                "charm",
+                                "mandatory",
+                                "principal",
+                            ],
+                            "description": "An Openstack ops charm is missing",
+                            "charm": charm,
+                            "message": "Openstack ops charm '{}' is missing".format(
+                                charm
+                            ),
+                        }
                     )
         elif self.cloud_type == "kubernetes":
             for charm in self.lint_rules["kubernetes mandatory"]:
                 if charm not in self.model.charms:
-                    self.logger.error(
-                        "[{}] [{}/{}] Kubernetes charm '{}' not found".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                            charm,
-                        )
+                    self.handle_error(
+                        {
+                            "id": "kubernetes-charm-missing",
+                            "tags": [
+                                "missing",
+                                "kubernetes",
+                                "charm",
+                                "mandatory",
+                                "principal",
+                            ],
+                            "description": "An Kubernetes charm is missing",
+                            "charm": charm,
+                            "message": "Kubernetes charm '{}' is missing".format(charm),
+                        }
                     )
 
     def results(self):
         """Provide results of the linting process."""
         if self.model.missing_subs:
-            self.logger.error("The following subordinates couldn't be found:")
             for sub in self.model.missing_subs:
-                self.logger.error(
-                    "[{}] [{}/{}] -> {} [{}]".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        sub,
-                        ", ".join(sorted(self.model.missing_subs[sub])),
-                    )
+                principals = ", ".join(sorted(self.model.missing_subs[sub]))
+                self.handle_error(
+                    {
+                        "id": "ops-subordinate-missing",
+                        "tags": ["missing", "ops", "charm", "mandatory", "subordinate"],
+                        "description": "Checks for mandatory Ops subordinates",
+                        "principals": principals,
+                        "subordinate": sub,
+                        "message": "Subordinate '{}' is missing for application(s): '{}'".format(
+                            sub, principals
+                        ),
+                    }
                 )
+
         if self.model.extraneous_subs:
-            self.logger.error("following subordinates where found unexpectedly:")
             for sub in self.model.extraneous_subs:
-                self.logger.error(
-                    "[{}] [{}/{}] -> {} [{}]".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        sub,
-                        ", ".join(sorted(self.model.extraneous_subs[sub])),
-                    )
+                principals = ", ".join(sorted(self.model.extraneous_subs[sub]))
+                self.handle_error(
+                    {
+                        "id": "subordinate-extraneous",
+                        "tags": ["extraneous", "charm", "subordinate"],
+                        "description": "Checks for extraneous subordinates in containers",
+                        "principals": principals,
+                        "subordinate": sub,
+                        "message": "Application(s) '{}' has extraneous subordinate '{}'".format(
+                            principals, sub
+                        ),
+                    }
                 )
         if self.model.duelling_subs:
-            self.logger.error(
-                "[{}] [{}/{}] following subordinates where found on machines more than once:".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                )
-            )
             for sub in self.model.duelling_subs:
-                self.logger.error(
-                    "[{}] [{}/{}] -> {} [{}]".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        sub,
-                        ", ".join(sorted(self.model.duelling_subs[sub])),
-                    )
+                machines = ", ".join(sorted(self.model.duelling_subs[sub]))
+                self.handle_error(
+                    {
+                        "id": "subordinate-duplicate",
+                        "tags": ["duplicate", "charm", "subordinate"],
+                        "description": "Checks for duplicate subordinates in a machine",
+                        "machines": machines,
+                        "subordinate": sub,
+                        "message": "Subordinate '{}' is duplicated on machines: '{}'".format(
+                            sub,
+                            machines,
+                        ),
+                    }
                 )
         if self.model.az_unbalanced_apps:
-            self.logger.error("The following apps are unbalanced across AZs: ")
             for app in self.model.az_unbalanced_apps:
                 (num_units, az_counter) = self.model.az_unbalanced_apps[app]
                 az_map = ", ".join(
-                    ["{}: {}".format(az, az_counter[az]) for az in az_counter]
+                    ["{}: {}".format(az, az_counter[az]) for az in sorted(az_counter)]
                 )
-                self.logger.error(
-                    "[{}] [{}/{}] -> {}: {} units, deployed as: {}".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        app,
-                        num_units,
-                        az_map,
-                    )
+                self.handle_error(
+                    {
+                        "id": "AZ-unbalance",
+                        "tags": ["AZ"],
+                        "description": "Checks for application balance across AZs",
+                        "application": app,
+                        "num_units": num_units,
+                        "az_map": az_map,
+                        "message": "Application '{}' is unbalanced across AZs: {} units, deployed as: {}".format(
+                            app, num_units, az_map
+                        ),
+                    }
                 )
+        if self.output_format == "json":
+            print(json.dumps(self.output_collector, indent=2, sort_keys=True))
 
     def map_charms(self, applications):
         """Process applications in the model, validating and normalising the names."""
@@ -726,10 +799,16 @@ class Linter:
                 self.model.charms.add(charm_name)
                 self.model.app_to_charm[app] = charm_name
             else:
-                self.logger.error(
-                    "[{}] [{}/{}] Could not detect which charm is used for application {}".format(
-                        self.cloud_name, self.controller_name, self.model_name, app
-                    )
+                self.handle_error(
+                    {
+                        "id": "charm-not-mapped",
+                        "tags": ["charm", "mapped", "parsing"],
+                        "description": "Detect the charm used by an application",
+                        "application": app,
+                        "message": "Could not detect which charm is used for application {}".format(
+                            app
+                        ),
+                    }
                 )
 
     def map_machines_to_az(self, machines):
@@ -760,20 +839,25 @@ class Linter:
 
     def check_status(self, what, status, expected):
         """Lint the status of a unit."""
+        current_status = status.get("current")
         if isinstance(expected, str):
             expected = [expected]
-        if status.get("current") not in expected:
-            self.logger.error(
-                "[{}] [{}/{}] {} has status '{}' (since: {}, message: {}); (We expected: {})".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    what,
-                    status.get("current"),
-                    status.get("since"),
-                    status.get("message"),
-                    expected,
-                )
+        if current_status not in expected:
+            status_since = status.get("since")
+            status_msg = status.get("message")
+            self.handle_error(
+                {
+                    "id": "status-unexpected",
+                    "tags": ["status"],
+                    "description": "Checks for unexpected status in juju and workload",
+                    "what": what,
+                    "status_current": current_status,
+                    "status_since": status_since,
+                    "status_msg": status_msg,
+                    "message": "{} has status '{}' (since: {}, message: {}); (We expected: {})".format(
+                        what, current_status, status_since, status_msg, expected
+                    ),
+                }
             )
 
     def check_status_pair(self, name, status_type, data_d):
@@ -866,10 +950,16 @@ class Linter:
             azs.add(self.model.machines_to_az[machine])
         num_azs = len(azs)
         if num_azs != 3:
-            self.logger.error(
-                "[{}] [{}/{}] Found {} AZs (not 3); and I don't currently know how to lint that.".format(
-                    self.cloud_name, self.controller_name, self.model_name, num_azs
-                )
+            self.handle_error(
+                {
+                    "id": "AZ-invalid-number",
+                    "tags": ["AZ"],
+                    "description": "Checks for a valid number or AZs (currently 3)",
+                    "num_azs": num_azs,
+                    "message": "Invalid number of AZs: '{}', expecting 3".format(
+                        num_azs
+                    ),
+                }
             )
             return
 
@@ -962,3 +1052,18 @@ class Linter:
                     self.model_name,
                 )
             )
+
+    def collect(self, error):
+        """Collect an error and add it to the collector."""
+        self.output_collector["errors"].append(error)
+
+    def handle_error(self, error):
+        """Collect an error and add it to the collector."""
+
+        self.logger.error(
+            "[{}] [{}/{}] {}.".format(
+                self.cloud_name, self.controller_name, self.model_name, error["message"]
+            )
+        )
+        if self.collect_errors:
+            self.collect(error)

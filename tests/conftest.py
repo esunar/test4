@@ -29,9 +29,12 @@ def mocked_pkg_resources(monkeypatch):
 @pytest.fixture
 def cli(monkeypatch):
     """Provide a test instance of the CLI class."""
-    monkeypatch.setattr(sys, "argv", ["juju-lint", "-c", "contrib/canonical-rules.yaml"])
+    monkeypatch.setattr(
+        sys, "argv", ["juju-lint", "-c", "contrib/canonical-rules.yaml"]
+    )
 
     from jujulint.cli import Cli
+
     cli = Cli()
 
     return cli
@@ -48,14 +51,70 @@ def utils():
 @pytest.fixture
 def parser(monkeypatch):
     """Mock the configuration parser."""
-    monkeypatch.setattr('jujulint.config.ArgumentParser', mock.Mock())
+    monkeypatch.setattr("jujulint.config.ArgumentParser", mock.Mock())
 
 
 @pytest.fixture
-def lint(parser):
+def linter(parser):
     """Provide test fixture for the linter class."""
     from jujulint.lint import Linter
 
-    linter = Linter('mockcloud', 'mockrules.yaml')
+    rules = {
+        "known charms": ["ntp", "ubuntu"],
+        "operations mandatory": ["ubuntu"],
+        "subordinates": {
+            "ntp": {"where": "all"},
+        },
+    }
+
+    linter = Linter("mockcloud", "mockrules.yaml")
+    linter.lint_rules = rules
+    linter.collect_errors = True
 
     return linter
+
+
+@pytest.fixture
+def juju_status():
+    """Provide a base juju status for testing."""
+    return {
+        "applications": {
+            "ubuntu": {
+                "application-status": {"current": "active"},
+                "charm": "cs:ubuntu-18",
+                "charm-name": "ubuntu",
+                "relations": {"juju-info": ["ntp"]},
+                "units": {
+                    "ubuntu/0": {
+                        "juju-status": {"current": "idle"},
+                        "machine": "0",
+                        "subordinates": {
+                            "ntp/0": {
+                                "juju-status": {"current": "idle"},
+                                "workload-status": {"current": "active"},
+                            }
+                        },
+                        "workload-status": {"current": "active"},
+                    }
+                },
+            },
+        },
+        "machines": {
+            "0": {
+                "hardware": "availability-zone=rack-1",
+                "juju-status": {"current": "started"},
+                "machine-status": {"current": "running"},
+                "modification-status": {"current": "applied"},
+            },
+            "1": {
+                "hardware": "availability-zone=rack-2",
+                "juju-status": {"current": "started"},
+                "machine-status": {"current": "running"},
+            },
+            "2": {
+                "hardware": "availability-zone=rack-3",
+                "juju-status": {"current": "started"},
+                "machine-status": {"current": "running"},
+            },
+        },
+    }

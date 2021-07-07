@@ -96,6 +96,13 @@ class Config(Configuration):
             help="File to log to in addition to stdout",
             dest="logging.file",
         )
+        self.parser.add_argument(
+            "--format",
+            "-F",
+            choices=["text", "json"],
+            default="text",
+            help="Format for output",
+        )
 
         args = self.parser.parse_args()
         self.set_args(args, dots=True)
