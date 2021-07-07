@@ -9,4 +9,4 @@ deb-src:
 	debuild -S -sa -I.git -I.tox
 
 test:
-	tox -e py3-test
+	tox -e unit

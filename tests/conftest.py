@@ -27,10 +27,11 @@ def mocked_pkg_resources(monkeypatch):
 
 
 @pytest.fixture
-def cli():
+def cli(monkeypatch):
     """Provide a test instance of the CLI class."""
-    from jujulint.cli import Cli
+    monkeypatch.setattr(sys, "argv", ["juju-lint", "-c", "contrib/canonical-rules.yaml"])
 
+    from jujulint.cli import Cli
     cli = Cli()
 
     return cli

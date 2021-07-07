@@ -36,7 +36,15 @@ class Cli:
         """Create new CLI and configure runtime environment."""
         self.config = Config()
         self.logger = Logger(self.config["logging"]["loglevel"].get())
-        self.version = pkg_resources.require("jujulint")[0].version
+
+        # get the version of the current package if available
+        # this will fail if not running from an installed package
+        # e.g. during unit tests
+        try:
+            self.version = pkg_resources.require("jujulint")[0].version
+        except pkg_resources.DistributionNotFound:
+            self.version = "unknown"
+
         rules_file = self.config["rules"]["file"].get()
         # handle absolute path provided
         if os.path.isfile(rules_file):
