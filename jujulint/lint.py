@@ -719,6 +719,27 @@ class Linter:
                             "message": "Kubernetes charm '{}' is missing".format(charm),
                         }
                     )
+            for charm in self.lint_rules["operations kubernetes mandatory"]:
+                if charm not in self.model.charms:
+                    self.handle_error(
+                        {
+                            "id": "kubernetes-ops-charm-missing",
+                            "tags": [
+                                "missing",
+                                "openstack",
+                                "ops",
+                                "charm",
+                                "mandatory",
+                                "principal",
+                            ],
+                            "description": "An Kubernetes ops charm is missing",
+                            "charm": charm,
+                            "message": "Kubernetes ops charm '{}' is missing".format(
+                                charm
+                            ),
+                        }
+                    )
+
 
     def results(self):
         """Provide results of the linting process."""
