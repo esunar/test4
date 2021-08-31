@@ -91,6 +91,23 @@ subordinates:
  logrotated:
   where: all
 
+kubernetes mandatory: &kubernetes-mandatory-charms
+ - containerd
+ - kubeapi-load-balancer
+ - kubernetes-master
+ - kubernetes-worker
+
+kubernetes optional charms: &kubernetes-optional-charms
+ - calico
+ - canal
+ - coredns
+ - easyrsa
+ - etcd
+ - flannel
+ - kubernetes-dashboard
+ - openstack-integrator
+ - vsphere-integrator
+
 operations mandatory: &operations-mandatory-charms
  - elasticsearch
  - grafana
@@ -109,6 +126,9 @@ operations openstack mandatory: &operations-openstack-mandatory-charms
  - prometheus-openstack-exporter
  - prometheus-ceph-exporter
  - prometheus-grok-exporter
+
+operations kubernetes mandatory: &operations-kubernetes-mandatory-charms
+ - kubernetes-service-checks
 
 operations mandatory dependencies: &operations-mandatory-deps
  - postgresql
@@ -135,6 +155,7 @@ operations optional subordinates: &operations-optional-subs
  - rsyslog-forwarder-ha
 
 operations charms: &operations-charms
+ - *operations-kubernetes-mandatory-charms
  - *operations-mandatory-charms
  - *operations-mandatory-deps
  - *operations-mandatory-subs
@@ -222,7 +243,12 @@ openstack charms: &openstack-charms
  - *masakari-charms
  - *trilio-charms
 
+kubernetes charms: &kubernetes-charms
+ - *kubernetes-mandatory-charms
+ - *kubernetes-optional-charms
+
 known charms:
  - ubuntu
  - *openstack-charms
  - *operations-charms
+ - *kubernetes-charms
