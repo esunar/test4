@@ -242,16 +242,29 @@ class TestLinter:
         assert errors[0]["id"] == "openstack-ops-charm-missing"
         assert errors[0]["charm"] == "openstack-service-checks"
 
-    def test_openstack_charm_missing(self, linter, juju_status):
+    def test_kubernetes_charm_missing(self, linter, juju_status):
         """Test that missing kubernetes mandatory charms are detected."""
         linter.cloud_type = "kubernetes"
         linter.lint_rules["kubernetes mandatory"] = ["kubernetes-master"]
+        linter.lint_rules["operations kubernetes mandatory"] = []
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
         assert len(errors) == 1
         assert errors[0]["id"] == "kubernetes-charm-missing"
         assert errors[0]["charm"] == "kubernetes-master"
+
+    def test_kubernetes_ops_charm_missing(self, linter, juju_status):
+        """Test that missing kubernetes mandatory charms are detected."""
+        linter.cloud_type = "kubernetes"
+        linter.lint_rules["kubernetes mandatory"] = []
+        linter.lint_rules["operations kubernetes mandatory"] = ["ntp"]
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "kubernetes-ops-charm-missing"
+        assert errors[0]["charm"] == "ntp"
 
     def test_config_eq(self, linter, juju_status):
         """Test the config condition 'eq'."""
