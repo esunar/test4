@@ -2,7 +2,6 @@
 """Tests for jujulint."""
 
 import pytest
-import jujulint
 
 
 def test_flatten_list(utils):
@@ -37,6 +36,8 @@ def test_map_charms(linter, utils):
 
 
 class TestLinter:
+    """Test the main Linter class."""
+
     def test_minimal_rules(self, linter, juju_status):
         """Test that the base rules/status have no errors."""
         linter.do_lint(juju_status)
@@ -90,7 +91,7 @@ class TestLinter:
         assert errors[0]["status_since"] == "01 Apr 2021 05:14:13Z"
         assert errors[0]["status_msg"] == 'hook failed: "install"'
 
-    def test_AZ_parsing(self, linter, juju_status):
+    def test_az_parsing(self, linter, juju_status):
         """Test that the AZ parsing is working as expected."""
         # duplicate a AZ name so we have 2 AZs instead of the expected 3
         juju_status["machines"]["2"]["hardware"] = "availability-zone=rack-1"
@@ -101,7 +102,7 @@ class TestLinter:
         assert errors[0]["id"] == "AZ-invalid-number"
         assert errors[0]["num_azs"] == 2
 
-    def test_AZ_balancing(self, linter, juju_status):
+    def test_az_balancing(self, linter, juju_status):
         """Test that applications are balanced across AZs."""
         # add an extra machine in an existing AZ
         juju_status["machines"].update(
@@ -277,8 +278,22 @@ class TestLinter:
         assert errors[0]["id"] == "config-eq-check"
         assert errors[0]["application"] == "ubuntu"
         assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] == False
-        assert errors[0]["actual_value"] == True
+        assert errors[0]["expected_value"] is False
+        assert errors[0]["actual_value"] is True
+
+    def test_config_neq(self, linter, juju_status):
+        """Test the config condition 'neq'."""
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": False}}}
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": False}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "config-neq-check"
+        assert errors[0]["application"] == "ubuntu"
+        assert errors[0]["rule"] == "fake-opt"
+        assert errors[0]["expected_value"] is False
+        assert errors[0]["actual_value"] is False
 
     def test_config_gte(self, linter, juju_status):
         """Test the config condition 'gte'."""
