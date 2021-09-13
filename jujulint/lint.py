@@ -32,10 +32,27 @@ import attr
 from jujulint.util import flatten_list, is_container, extract_charm_name
 from jujulint.logging import Logger
 
+VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
+
+# Generic named tuple to represent the binary config operators (eq,neq,gte)
+ConfigOperator = collections.namedtuple(
+    "ConfigOperator", "name repr check error_template"
+)
+
 # TODO:
-#  - tests
 #  - missing relations for mandatory subordinates
 #  - info mode, e.g. num of machines, version (e.g. look at ceph), architecture
+
+
+def helper_operator_eq_check(check_value, actual_value):
+    """Perform the actual equality check for the eq/neq rules."""
+    match = False
+    try:
+        match = re.match(re.compile(str(check_value)), str(actual_value))
+    except re.error:
+        match = check_value == actual_value
+
+    return match
 
 
 @attrs
@@ -183,59 +200,12 @@ class Linter:
 
         return _int * conv[val[-1].lower()]
 
-    def gte(self, name, check_value, rule, config):
-        """Check if value is greater than or equal to the check value."""
-        if rule in config:
-            current = self.atoi(config[rule])
-            expected = self.atoi(check_value)
-            if current >= expected:
-                self.logger.debug(
-                    "[{}] [{}/{}] (PASS) Application {} has config for {} which is >= {}: {}.".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        name,
-                        rule,
-                        check_value,
-                        config[rule],
-                    )
-                )
-                return True
-
-            actual_value = config[rule]
-            self.handle_error(
-                {
-                    "id": "config-gte-check",
-                    "tags": ["config", "gte"],
-                    "description": "Checks for config condition 'gte'",
-                    "application": name,
-                    "rule": rule,
-                    "expected_value": check_value,
-                    "actual_value": actual_value,
-                    "message": "Application {} has config for {} which is less than {}: {}.".format(
-                        name, rule, check_value, actual_value
-                    ),
-                }
-            )
-            return False
-        self.logger.warn(
-            "[{}] [{}/{}] When checking if application {} has no config for {}, can't determine if >= than {}.".format(
-                self.cloud_name,
-                self.controller_name,
-                self.model_name,
-                name,
-                rule,
-                check_value,
-            )
-        )
-        return False
-
     def isset(self, name, check_value, rule, config):
         """Check if value is set per rule constraints."""
         if rule in config:
             if check_value is True:
                 self.logger.debug(
-                    "[{}] [{}/{}] (PASS) Application {} correctly has manual config for {}: {}.".format(
+                    "[{}] [{}/{}] (PASS) Application {} correctly has config for '{}': {}.".format(
                         self.cloud_name,
                         self.controller_name,
                         self.model_name,
@@ -254,15 +224,15 @@ class Linter:
                     "application": name,
                     "rule": rule,
                     "actual_value": actual_value,
-                    "message": "Application {} has manual config for {}: {}.".format(
+                    "message": "Application {} has config for {}: {}.".format(
                         name, rule, actual_value
                     ),
                 }
             )
             return False
-        if check_value is False:
+        elif check_value is False:
             self.logger.debug(
-                "[{}] [{}/{}] (PASS) Application {} is correctly using default config for {}.".format(
+                "[{}] [{}/{}] (PASS) Application {} correctly had no config for '{}'.".format(
                     self.cloud_name,
                     self.controller_name,
                     self.model_name,
@@ -278,61 +248,118 @@ class Linter:
                 "description": "Checks for config condition 'isset' true",
                 "application": name,
                 "rule": rule,
-                "message": "Application {} has no manual config for {}.".format(
-                    name, rule
-                ),
+                "message": "Application {} has no config for {}.".format(name, rule),
             }
         )
         return False
 
-    def eq(self, name, check_value, rule, config):
-        """Check if value is matches the provided value or regex, autodetecting regex."""
-        if rule in config:
-            match = False
-            try:
-                match = re.match(re.compile(str(check_value)), str(config[rule]))
-            except re.error:
-                match = check_value == config[rule]
-            if match:
-                self.logger.debug(
-                    "[{}] [{}/{}] Application {} has correct setting for {}: Expected {}, got {}.".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                        name,
-                        rule,
-                        check_value,
-                        config[rule],
-                    )
+    def eq(self, app_name, check_value, config_key, app_config):
+        """Check if value matches the provided value or regex, autodetecting regex."""
+        operator = ConfigOperator(
+            name="eq",
+            repr="==",
+            check=helper_operator_eq_check,
+            error_template="Application {} has incorrect setting for '{}': Expected {}, got {}",
+        )
+
+        return self.check_config_generic(
+            operator, app_name, check_value, config_key, app_config
+        )
+
+    def neq(self, app_name, check_value, config_key, app_config):
+        """Check if value does not match a the config."""
+        operator = ConfigOperator(
+            name="neq",
+            repr="!=",
+            check=lambda check_value, actual_value: not helper_operator_eq_check(
+                check_value, actual_value
+            ),
+            error_template="Application {} has incorrect setting for '{}': Should not be {}",
+        )
+
+        return self.check_config_generic(
+            operator, app_name, check_value, config_key, app_config
+        )
+
+    def gte(self, app_name, check_value, config_key, app_config):
+        """Check if value is greater than or equal to the check value."""
+
+        def operator_gte_check(check_value, actual_value):
+            """Perform the actual gte check."""
+            current = self.atoi(actual_value)
+            expected = self.atoi(check_value)
+            return current >= expected
+
+        operator = ConfigOperator(
+            name="gte",
+            repr=">=",
+            check=operator_gte_check,
+            error_template="Application {} has config for '{}' which is less than {}: {}",
+        )
+
+        return self.check_config_generic(
+            operator, app_name, check_value, config_key, app_config
+        )
+
+    def check_config_generic(
+        self, operator, app_name, check_value, config_key, app_config
+    ):
+        """Apply the provided config operator to the configuration."""
+        model_header = "[{}] [{}/{}]".format(
+            self.cloud_name,
+            self.controller_name,
+            self.model_name,
+        )
+
+        # First check if the config key is present
+        if config_key not in app_config:
+            self.logger.warn(
+                "{} Application {} has no config for '{}', cannot determine if {} {}.".format(
+                    model_header,
+                    app_name,
+                    config_key,
+                    operator.repr,
+                    repr(check_value),
                 )
-                return True
-            actual_value = config[rule]
+            )
+            return False
+
+        actual_value = app_config[config_key]
+
+        # Apply the check callable and handle the possible cases
+        if operator.check(check_value, actual_value):
+            self.logger.debug(
+                "{} Application {} has a valid config for '{}': {} ({} {})".format(
+                    model_header,
+                    app_name,
+                    config_key,
+                    repr(check_value),
+                    operator.repr,
+                    repr(actual_value),
+                )
+            )
+            return True
+        else:
             self.handle_error(
                 {
-                    "id": "config-eq-check",
-                    "tags": ["config", "eq"],
-                    "description": "Checks for config condition 'eq'",
-                    "application": name,
-                    "rule": rule,
+                    "id": "config-{}-check".format(operator.name),
+                    "tags": ["config", operator.name],
+                    "description": "Checks for config condition '{}'".format(
+                        operator.name
+                    ),
+                    "application": app_name,
+                    "rule": config_key,
                     "expected_value": check_value,
                     "actual_value": actual_value,
-                    "message": "Application {} has incorrect setting for {}: Expected {}, got {}.".format(
-                        name, rule, check_value, actual_value
+                    "message": operator.error_template.format(
+                        app_name,
+                        config_key,
+                        repr(check_value),
+                        repr(actual_value),
                     ),
                 }
             )
-            return False
-        else:
-            self.logger.warn(
-                "[{}] [{}/{}] When checking if application {} has no config for {}, can't determine if == {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    name,
-                    rule,
-                    check_value,
-                )
-            )
+        return False
 
     def check_config(self, name, config, rules):
         """Check application against provided rules."""
@@ -344,12 +371,10 @@ class Linter:
                 )
             )
             for check_op, check_value in rules[rule].items():
-                if check_op == "isset":
-                    self.isset(name, check_value, rule, config)
-                elif check_op == "eq":
-                    self.eq(name, check_value, rule, config)
-                elif check_op == "gte":
-                    self.gte(name, check_value, rule, config)
+                # check_op should be the operator name, e.g. (eq, neq, gte, isset)
+                if check_op in VALID_CONFIG_CHECKS:
+                    check_method = getattr(self, check_op)
+                    check_method(name, check_value, rule, config)
                 else:
                     self.logger.warn(
                         "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
@@ -740,7 +765,6 @@ class Linter:
                         }
                     )
 
-
     def results(self):
         """Provide results of the linting process."""
         if self.model.missing_subs:
@@ -1080,7 +1104,6 @@ class Linter:
 
     def handle_error(self, error):
         """Collect an error and add it to the collector."""
-
         self.logger.error(
             "[{}] [{}/{}] {}.".format(
                 self.cloud_name, self.controller_name, self.model_name, error["message"]

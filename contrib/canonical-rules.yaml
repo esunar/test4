@@ -24,7 +24,7 @@ openstack config:
    eq: 9000
  nova-compute:
   cpu-model:
-   isset: true
+   neq: ""
   ceph-osd-replication-count:
    eq: 3
  percona-cluster:
@@ -59,9 +59,9 @@ config:
    eq: false
  nrpe:
   lacp_bonds:
-   isset: true
+   neq: ""
   netlinks:
-   isset: true
+   neq: ""
  landscape-client:
   disable-unattended-upgrades:
    eq: true
