@@ -301,10 +301,19 @@ class TestLinter:
         assert errors[0]["expected_value"] is False
         assert errors[0]["actual_value"] is True
 
-    def test_config_neq(self, linter, juju_status):
+    def test_config_neq_valid(self, linter, juju_status):
         """Test the config condition 'neq'."""
-        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": False}}}
-        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": False}
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": "foo"}}}
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": "bar"}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 0
+
+    def test_config_neq_invalid(self, linter, juju_status):
+        """Test the config condition 'neq', valid."""
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": ""}}}
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": ""}
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
@@ -312,8 +321,8 @@ class TestLinter:
         assert errors[0]["id"] == "config-neq-check"
         assert errors[0]["application"] == "ubuntu"
         assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] is False
-        assert errors[0]["actual_value"] is False
+        assert errors[0]["expected_value"] == ""
+        assert errors[0]["actual_value"] == ""
 
     def test_config_gte(self, linter, juju_status):
         """Test the config condition 'gte'."""
