@@ -119,6 +119,7 @@ operations mandatory: &operations-mandatory-charms
 operations optional: &operations-optional-charms
  - infra-node
  - cloudstats
+ - juju-lint
 
 operations openstack mandatory: &operations-openstack-mandatory-charms
  - openstack-service-checks
@@ -192,6 +193,7 @@ openstack optional charms: &openstack-optional-charms
  - aodh
  - barbican
  - barbican-vault
+ - ceph-fs
  - ceph-radosgw
  - cinder-backup
  - designate
@@ -201,9 +203,15 @@ openstack optional charms: &openstack-optional-charms
  - glance-simplestreams-sync
  - glance-sync-slave
  - gnocchi
+ - ironic-api
+ - ironic-conductor
  - keystone-ldap
+ - manila
+ - manila-ganesha
+ - manila-dashboard
  - mongodb  # Optional since Gnocchi
  - neutron-gateway
+ - neutron-api-plugin-ironic
  - octavia
  - octavia-dashboard
  - octavia-diskimage-retrofit
