@@ -353,3 +353,75 @@ class TestLinter:
         assert errors[0]["id"] == "config-isset-check-true"
         assert errors[0]["application"] == "ubuntu"
         assert errors[0]["rule"] == "fake-opt"
+
+    def test_parse_cmr_apps_export_bundle(self, linter):
+        """Test the charm CMR parsing for bundles."""
+        parsed_yaml = {
+            "saas": {
+                "grafana": {"url": "foundations-maas:admin/lma.grafana"},
+                "nagios": {"url": "foundations-maas:admin/lma.nagios-monitors"},
+            }
+        }
+        linter.parse_cmr_apps(parsed_yaml)
+        assert linter.model.cmr_apps == {"grafana", "nagios"}
+
+    def test_parse_cmr_apps_jsfy(self, linter):
+        """Test the charm CMR parsing for juju status."""
+        parsed_yaml = {
+            "application-endpoints": {
+                "grafana": {"url": "foundations-maas:admin/lma.grafana"},
+                "nagios": {"url": "foundations-maas:admin/lma.nagios-monitors"},
+            }
+        }
+        linter.parse_cmr_apps(parsed_yaml)
+        assert linter.model.cmr_apps == {"grafana", "nagios"}
+
+    def test_parse_cmr_apps_libjuju(self, linter):
+        """Test the charm CMR parsing for libjuju."""
+        parsed_yaml = {
+            "remote-applications": {
+                "grafana": {"url": "foundations-maas:admin/lma.grafana"},
+                "nagios": {"url": "foundations-maas:admin/lma.nagios-monitors"},
+            }
+        }
+        linter.parse_cmr_apps(parsed_yaml)
+        assert linter.model.cmr_apps == {"grafana", "nagios"}
+
+    def test_check_charms_ops_mandatory_crm_success(self, linter):
+        """
+        Test the logic for checking ops mandatory charms provided via CMR.
+
+        The app is in the saas rules and has a CMR, no error is expected
+        """
+        linter.lint_rules["saas"] = ["grafana"]
+        linter.model.cmr_apps.add("grafana")
+        error = linter.check_charms_ops_mandatory("grafana")
+
+        assert error is None
+
+    def test_check_charms_ops_mandatory_crm_fail1(self, linter):
+        """
+        Test the logic for checking ops mandatory charms provided via CMR.
+
+        The app is not in the saas rules, should report an error
+        """
+        linter.model.cmr_apps.add("grafana")
+        error = linter.check_charms_ops_mandatory("grafana")
+
+        # The app is not in the rules, should report an error
+        assert error is not None
+        assert error["id"] == "ops-charm-missing"
+        assert error["charm"] == "grafana"
+
+    def test_check_charms_ops_mandatory_crm_fail2(self, linter):
+        """
+        Test the logic for checking ops mandatory charms provided via CMR.
+
+        The app is in the saas rules, but no CMR in place, should report error
+        """
+        linter.lint_rules["saas"] = ["grafana"]
+        error = linter.check_charms_ops_mandatory("grafana")
+
+        assert error is not None
+        assert error["id"] == "ops-charm-missing"
+        assert error["charm"] == "grafana"
