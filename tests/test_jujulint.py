@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Tests for jujulint."""
+from datetime import datetime, timezone
 
 import pytest
 
@@ -77,7 +78,7 @@ class TestLinter:
             "workload-status"
         ].update(
             {
-                "current": "error",
+                "current": "executing",
                 "since": "01 Apr 2021 05:14:13Z",
                 "message": 'hook failed: "install"',
             }
@@ -87,9 +88,28 @@ class TestLinter:
         errors = linter.output_collector["errors"]
         assert len(errors) == 1
         assert errors[0]["id"] == "status-unexpected"
-        assert errors[0]["status_current"] == "error"
+        assert errors[0]["status_current"] == "executing"
         assert errors[0]["status_since"] == "01 Apr 2021 05:14:13Z"
         assert errors[0]["status_msg"] == 'hook failed: "install"'
+
+    def test_juju_status_ignore_recent_executing(self, linter, juju_status):
+        """Test that recent executing status is ignored."""
+        # inject a recent execution status to the unit
+        since_datetime = datetime.now(timezone.utc)
+
+        juju_status["applications"]["ubuntu"]["units"]["ubuntu/0"][
+            "workload-status"
+        ].update(
+            {
+                "current": "executing",
+                "since": since_datetime.isoformat(),
+                "message": 'hook failed: "install"',
+            }
+        )
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 0
 
     def test_az_parsing(self, linter, juju_status):
         """Test that the AZ parsing is working as expected."""

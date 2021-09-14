@@ -19,6 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Lint operations and rule processing engine."""
 import collections
+from datetime import datetime, timezone
 import json
 import os.path
 import pprint
@@ -28,6 +29,8 @@ import yaml
 
 from attr import attrs, attrib
 import attr
+import dateutil.parser
+from dateutil import relativedelta
 
 from jujulint.util import flatten_list, is_container, extract_charm_name
 from jujulint.logging import Logger
@@ -74,6 +77,8 @@ class ModelInfo(object):
 
 class Linter:
     """Linter for a Juju model, instantiate a new class for each model."""
+
+    MAX_UNIT_EXECUTION_SECONDS = 3600  # 1 hr
 
     def __init__(
         self,
@@ -887,8 +892,17 @@ class Linter:
         current_status = status.get("current")
         if isinstance(expected, str):
             expected = [expected]
+
         if current_status not in expected:
             status_since = status.get("since")
+
+            since_datetime = dateutil.parser.parse(status_since)
+            ref_datetime = datetime.now(timezone.utc) - relativedelta.relativedelta(
+                seconds=self.MAX_UNIT_EXECUTION_SECONDS
+            )
+            if current_status == "executing" and since_datetime > ref_datetime:
+                return
+
             status_msg = status.get("message")
             self.handle_error(
                 {
