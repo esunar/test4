@@ -63,6 +63,7 @@ class ModelInfo(object):
     """Represent information obtained from juju status data."""
 
     charms = attrib(default=attr.Factory(set))
+    cmr_apps = attrib(default=attr.Factory(set))
     app_to_charm = attrib(default=attr.Factory(dict))
     subs_on_machines = attrib(default=attr.Factory(dict))
     apps_on_machines = attrib(default=attr.Factory(dict))
@@ -668,6 +669,31 @@ class Linter:
             if not self.model.extraneous_subs[sub]:
                 del self.model.extraneous_subs[sub]
 
+    def check_charms_ops_mandatory(self, charm):
+        """
+        Check if a mandatory ops charms is present in the model.
+
+        First check if the charm is installed in the model, if not
+        then check the CMRs. If no errors, returns None
+        """
+        if charm in self.model.charms:
+            return None
+
+        rules_saas = self.lint_rules.get("saas", {})
+        for cmr_app in self.model.cmr_apps:
+            # the remote might not be called exactly as the charm, e.g. prometheus
+            # or prometheus2, so we naively check the beginning for a start.
+            if charm in rules_saas and charm.startswith(cmr_app):
+                return None
+
+        return {
+            "id": "ops-charm-missing",
+            "tags": ["missing", "ops", "charm", "mandatory", "principal"],
+            "description": "An Ops charm is missing",
+            "charm": charm,
+            "message": "Ops charm '{}' is missing".format(charm),
+        }
+
     def check_charms(self):
         """Check we recognise the charms which are in the model."""
         for charm in self.model.charms:
@@ -683,16 +709,9 @@ class Linter:
                 )
         # Then look for charms we require
         for charm in self.lint_rules["operations mandatory"]:
-            if charm not in self.model.charms:
-                self.handle_error(
-                    {
-                        "id": "ops-charm-missing",
-                        "tags": ["missing", "ops", "charm", "mandatory", "principal"],
-                        "description": "An Ops charm is missing",
-                        "charm": charm,
-                        "message": "Ops charm '{}' is missing".format(charm),
-                    }
-                )
+            error = self.check_charms_ops_mandatory(charm)
+            if error:
+                self.handle_error(error)
         if self.cloud_type == "openstack":
             for charm in self.lint_rules["openstack mandatory"]:
                 if charm not in self.model.charms:
@@ -860,6 +879,24 @@ class Linter:
                         ),
                     }
                 )
+
+    def parse_cmr_apps(self, parsed_yaml):
+        """Parse the apps from cross-model relations."""
+        cmr_keys = (
+            "saas",  # Pattern used by juju export-bundle
+            "application-endpoints",  # Pattern used by jsfy
+            "remote-applications",  # Pattern used by libjuju (charm-lint-juju)
+        )
+
+        for key in cmr_keys:
+            if key in parsed_yaml:
+                for name in parsed_yaml[key]:
+                    self.model.cmr_apps.add(name)
+
+                    # Handle the special case of dependencies for graylog
+                    if name.startswith("graylog"):
+                        self.model.cmr_apps.add("elasticsearch")
+                return
 
     def map_machines_to_az(self, machines):
         """Map machines in the model to their availability zone."""
@@ -1075,6 +1112,9 @@ class Linter:
 
             # Build a list of deployed charms and mapping of charms <-> applications
             self.map_charms(parsed_yaml[applications])
+
+            # Parse SAAS / remote-applications
+            self.parse_cmr_apps(parsed_yaml)
 
             # Check configuration
             self.check_configuration(parsed_yaml[applications])

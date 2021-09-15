@@ -260,3 +260,11 @@ known charms:
  - *openstack-charms
  - *operations-charms
  - *kubernetes-charms
+
+saas:
+ - elasticsearch
+ - grafana
+ - graylog
+ - landscape-server
+ - nagios
+ - prometheus2
