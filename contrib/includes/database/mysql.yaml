@@ -1,0 +1,10 @@
+openstack database config: &openstack-config-database
+ mysql-innodb-cluster:
+  innodb-buffer-pool-size:
+   gte: 6G
+  max-connections:
+   gte: 2000
+
+openstack mandatory deps database: &openstack-mandatory-deps-database
+ - mysql-innodb-cluster
+ - mysql-router

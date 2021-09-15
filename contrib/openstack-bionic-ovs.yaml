@@ -1,0 +1,13 @@
+---
+# Openstack rule set for a Bionic OVS Cloud
+# * Use OVS, not OVN
+# * Uses percona-cluster, not mysql-innodb-cluster/router
+# * Includes prometheus-ceph-exporter
+!include includes/base.yaml
+!include includes/networking/ovs.yaml
+!include includes/database/percona-cluster.yaml
+!include includes/operations/bionic.yaml
+!include includes/openstack.yaml
+!include includes/operations.yaml
+!include includes/saas.yaml
+!include includes/aggregator-openstack.yaml

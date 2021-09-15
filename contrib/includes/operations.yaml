@@ -1,0 +1,49 @@
+operations mandatory: &operations-mandatory-charms
+ - elasticsearch
+ - grafana
+ - graylog
+ - landscape-server
+ - nagios
+ - prometheus2
+
+operations optional: &operations-optional-charms
+ - infra-node
+ - cloudstats
+ - juju-lint
+
+operations openstack mandatory base: &operations-openstack-mandatory-base
+ - openstack-service-checks
+ - prometheus-libvirt-exporter
+ - prometheus-openstack-exporter
+ - prometheus-grok-exporter
+
+operations openstack mandatory: &operations-openstack-mandatory-charms
+ - *operations-openstack-mandatory-base
+ - *operations-openstack-mandatory-series
+
+operations mandatory dependencies: &operations-mandatory-deps
+ - postgresql
+
+operations subordinates: &operations-mandatory-subs
+ - canonical-livepatch
+ - filebeat
+ - ksplice
+ - landscape-client
+ - lldpd
+ - nrpe
+ - ntp
+ - telegraf
+ - thruk-agent
+ - hw-health
+ - logrotated
+
+operations optional subordinates: &operations-optional-subs
+ - policy-routing
+ - bcache-tuning
+ - sysconfig
+ - logrotate-charm
+ - advanced-routing
+ - rsyslog-forwarder-ha
+
+operations kubernetes mandatory: &operations-kubernetes-mandatory-charms
+ - kubernetes-service-checks

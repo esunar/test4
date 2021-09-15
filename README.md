@@ -2,7 +2,7 @@
 
 == Introduction ==
 
-This is intended to be run against a yaml dump of Juju status, a YAML dump of 
+This is intended to be run against a yaml dump of Juju status, a YAML dump of
 a juju bundle or a remote cloud or clouds via SSH.
 
 To generate a status if you just want to audit placement:
@@ -49,7 +49,8 @@ Supported top-level options for your rules file:
  3. `operations [mandatory|optional|subordinate]`
  4. `openstack [mandatory|optional|subordinate]`
  5. `config` - application configuration auditing
- 5. `[openstack|kubernetes] config` - config auditing for specific cloud types.
+ 6. `[openstack|kubernetes] config` - config auditing for specific cloud types.
+ 7. `!include <relative path>` - Extension to yaml to include files.
 
 == License ==
 

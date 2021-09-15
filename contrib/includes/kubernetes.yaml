@@ -1,0 +1,24 @@
+kubernetes config:
+ kubernetes-master:
+  authorization-mode:
+   eq: "RBAC,Node"
+ canal:
+  cidr:
+   isset: false
+
+kubernetes mandatory: &kubernetes-mandatory-charms
+ - containerd
+ - kubeapi-load-balancer
+ - kubernetes-master
+ - kubernetes-worker
+
+kubernetes optional charms: &kubernetes-optional-charms
+ - calico
+ - canal
+ - coredns
+ - easyrsa
+ - etcd
+ - flannel
+ - kubernetes-dashboard
+ - openstack-integrator
+ - vsphere-integrator

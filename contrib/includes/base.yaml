@@ -1,0 +1,40 @@
+config:
+ hacluster:
+  cluster_count:
+   gte: 3
+ ntp:
+  auto_peers:
+   eq: false
+ nrpe:
+  lacp_bonds:
+   neq: ""
+  netlinks:
+   neq: ""
+ landscape-client:
+  disable-unattended-upgrades:
+   eq: true
+
+subordinates:
+ telegraf:
+  where: all except prometheus
+  # and prometheus-ceph-exporter and prometheus-openstack-exporter
+ landscape-client:
+  where: all except landscape-server
+ filebeat:
+  where: all except graylog
+ canonical-livepatch:
+  where: host only
+ nrpe:
+  where: container aware
+  host-suffixes: [host, physical, guest]
+  container-suffixes: [lxd, container]
+  exceptions: [nagios]
+ ntp:
+  # You don't want NTP in a container dueling with ntp in the host
+  where: host only
+ thruk-agent:
+  where: on nagios
+ hw-health:
+  where: host only
+ logrotated:
+  where: all

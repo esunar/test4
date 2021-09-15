@@ -1,0 +1,2 @@
+operations openstack mandatory series: &operations-openstack-mandatory-series
+ - prometheus-ceph-exporter

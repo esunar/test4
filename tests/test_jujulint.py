@@ -16,6 +16,12 @@ def test_flatten_list(utils):
     assert flattened_list == utils.flatten_list(unflattened_list)
 
 
+def test_flatten_list_non_list_iterable(utils):
+    """Test the utils flatten_list function."""
+    iterable = {1: 2}
+    assert iterable == utils.flatten_list(iterable)
+
+
 def test_map_charms(linter, utils):
     """Test the charm name validation code."""
     applications = {
@@ -434,3 +440,24 @@ class TestLinter:
         assert error is not None
         assert error["id"] == "ops-charm-missing"
         assert error["charm"] == "grafana"
+
+    def test_read_rules_plain_yaml(self, linter, tmp_path):
+        """Test that a simple rules YAML is imported as expected."""
+        rules_path = tmp_path / "rules.yaml"
+        rules_path.write_text('---\nkey:\n "value"')
+
+        linter.filename = str(rules_path)
+        linter.read_rules()
+        assert linter.lint_rules == {"key": "value"}
+
+    def test_read_rules_include(self, linter, tmp_path):
+        """Test that rules YAML with an include is imported as expected."""
+        include_path = tmp_path / "include.yaml"
+        include_path.write_text('key-inc:\n "value2"')
+
+        rules_path = tmp_path / "rules.yaml"
+        rules_path.write_text('---\n!include include.yaml\nkey:\n "value"')
+
+        linter.filename = str(rules_path)
+        linter.read_rules()
+        assert linter.lint_rules == {"key": "value", "key-inc": "value2"}
