@@ -277,9 +277,7 @@ class Linter:
         operator = ConfigOperator(
             name="neq",
             repr="!=",
-            check=lambda check_value, actual_value: not helper_operator_eq_check(
-                check_value, actual_value
-            ),
+            check=lambda check_value, actual_value: check_value != actual_value,
             error_template="Application {} has incorrect setting for '{}': Should not be {}",
         )
 

@@ -47,6 +47,7 @@ def is_container(machine):
 
 
 def extract_charm_name(charm):
+    """Extract the charm name using regex."""
     match = re.match(
         r"^(?:\w+:)?(?:~[\w\.-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
     )
