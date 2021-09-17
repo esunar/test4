@@ -105,3 +105,7 @@ class Logger:
     def error(self, message):
         """Log a message with warn loglevel."""
         self.logger.error(message)
+
+    def log(self, message, level=logging.DEBUG):
+        """Log a message with arbitrary loglevel."""
+        self.logger.log(level, message)
