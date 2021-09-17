@@ -21,6 +21,7 @@
 import collections
 from datetime import datetime, timezone
 import json
+import logging
 import os.path
 import pprint
 import re
@@ -126,27 +127,16 @@ class Linter:
             if self.overrides:
                 for override in self.overrides.split("#"):
                     (name, where) = override.split(":")
-                    self.logger.info(
-                        "[{}] [{}/{}] Overriding {} with {}".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                            name,
-                            where,
-                        )
+                    self._log_with_header(
+                        "Overriding {} with {}".format(name, where), level=logging.INFO
                     )
                     self.lint_rules["subordinates"][name] = dict(where=where)
 
             # Flatten all entries (to account for nesting due to YAML anchors (templating)
             self.lint_rules = {k: flatten_list(v) for k, v in self.lint_rules.items()}
 
-            self.logger.debug(
-                "[{}] [{}/{}] Lint Rules: {}".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    pprint.pformat(self.lint_rules),
-                )
+            self._log_with_header(
+                "Lint Rules: {}".format(pprint.pformat(self.lint_rules))
             )
             return True
         self.logger.error("Rules file {} does not exist.".format(self.filename))
@@ -165,15 +155,7 @@ class Linter:
                 subordinates = [i.split("/")[0] for i in subordinates]
             else:
                 subordinates = []
-            self.logger.debug(
-                "[{}] [{}/{}] {}: {}".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                    unit,
-                    subordinates,
-                )
-            )
+            self._log_with_header("{}: {}".format(unit, subordinates))
             machine = app_d["units"][unit]["machine"]
             self.model.subs_on_machines.setdefault(machine, set())
             for sub in subordinates:
@@ -214,11 +196,8 @@ class Linter:
         """Check if value is set per rule constraints."""
         if rule in config:
             if check_value is True:
-                self.logger.debug(
-                    "[{}] [{}/{}] (PASS) Application {} correctly has config for '{}': {}.".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
+                self._log_with_header(
+                    "(PASS) Application {} correctly has config for '{}': {}.".format(
                         name,
                         rule,
                         config[rule],
@@ -241,11 +220,8 @@ class Linter:
             )
             return False
         elif check_value is False:
-            self.logger.debug(
-                "[{}] [{}/{}] (PASS) Application {} correctly had no config for '{}'.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
+            self._log_with_header(
+                "(PASS) Application {} correctly had no config for '{}'.".format(
                     name,
                     rule,
                 )
@@ -313,22 +289,16 @@ class Linter:
         self, operator, app_name, check_value, config_key, app_config
     ):
         """Apply the provided config operator to the configuration."""
-        model_header = "[{}] [{}/{}]".format(
-            self.cloud_name,
-            self.controller_name,
-            self.model_name,
-        )
-
         # First check if the config key is present
         if config_key not in app_config:
-            self.logger.warn(
-                "{} Application {} has no config for '{}', cannot determine if {} {}.".format(
-                    model_header,
+            self._log_with_header(
+                "Application {} has no config for '{}', cannot determine if {} {}.".format(
                     app_name,
                     config_key,
                     operator.repr,
                     repr(check_value),
-                )
+                ),
+                level=logging.WARN,
             )
             return False
 
@@ -336,9 +306,8 @@ class Linter:
 
         # Apply the check callable and handle the possible cases
         if operator.check(check_value, actual_value):
-            self.logger.debug(
-                "{} Application {} has a valid config for '{}': {} ({} {})".format(
-                    model_header,
+            self._log_with_header(
+                "Application {} has a valid config for '{}': {} ({} {})".format(
                     app_name,
                     config_key,
                     repr(check_value),
@@ -373,26 +342,20 @@ class Linter:
         """Check application against provided rules."""
         rules = dict(rules)
         for rule in rules:
-            self.logger.debug(
-                "[{}] [{}/{}] Checking {} for configuration {}".format(
-                    self.cloud_name, self.controller_name, self.model_name, name, rule
-                )
-            )
+            self._log_with_header("Checking {} for configuration {}".format(name, rule))
             for check_op, check_value in rules[rule].items():
                 # check_op should be the operator name, e.g. (eq, neq, gte, isset)
                 if check_op in VALID_CONFIG_CHECKS:
                     check_method = getattr(self, check_op)
                     check_method(name, check_value, rule, config)
                 else:
-                    self.logger.warn(
-                        "[{}] [{}/{}] Application {} has unknown check operation for {}: {}.".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
+                    self._log_with_header(
+                        "Application {} has unknown check operation for {}: {}.".format(
                             name,
                             rule,
                             check_op,
-                        )
+                        ),
+                        level=logging.WARN,
                     )
 
     def check_configuration(self, applications):
@@ -401,13 +364,11 @@ class Linter:
             # look for config rules for this application
             lint_rules = []
             if "charm" not in applications[application]:
-                self.logger.warn(
-                    "[{}] [{}/{}] Application {} has no charm.".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
+                self._log_with_header(
+                    "Application {} has no charm.".format(
                         application,
-                    )
+                    ),
+                    level=logging.WARN,
                 )
                 continue
 
@@ -442,103 +403,51 @@ class Linter:
         for required_sub in self.lint_rules["subordinates"]:
             self.model.missing_subs.setdefault(required_sub, set())
             self.model.extraneous_subs.setdefault(required_sub, set())
-            self.logger.debug(
-                "[{}] [{}/{}] Checking for sub {}".format(
-                    self.cloud_name, self.controller_name, self.model_name, required_sub
-                )
-            )
+            self._log_with_header("Checking for sub {}".format(required_sub))
             where = self.lint_rules["subordinates"][required_sub]["where"]
             for machine in self.model.subs_on_machines:
-                self.logger.debug(
-                    "[{}] [{}/{}] Checking on {}".format(
-                        self.cloud_name, self.controller_name, self.model_name, machine
-                    )
-                )
+                self._log_with_header("Checking on {}".format(machine))
                 present_subs = self.model.subs_on_machines[machine]
                 apps = self.model.apps_on_machines[machine]
                 if where.startswith("on "):  # only on specific apps
                     required_on = where[3:]
-                    self.logger.debug(
-                        "[{}] [{}/{}] Requirement {} is = from...".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                            required_on,
-                        )
+                    self._log_with_header(
+                        "Requirement {} is = from...".format(required_on)
                     )
                     if required_on not in apps:
-                        self.logger.debug(
-                            "[{}] [{}/{}] ... NOT matched".format(
-                                self.cloud_name, self.controller_name, self.model_name
-                            )
-                        )
+                        self._log_with_header("... NOT matched")
                         continue
-                    self.logger.debug("[{}] [{}/{}] ... matched")
+                    self._log_with_header("... matched")
                 # TODO this needs to be not just one app, but a list
                 elif where.startswith("all except "):  # not next to this app
-                    self.logger.debug(
-                        "[{}] [{}/{}] requirement is != form...".format(
-                            self.cloud_name, self.controller_name, self.model_name
-                        )
-                    )
+                    self._log_with_header("requirement is != form...")
                     not_on = where[11:]
                     if not_on in apps:
-                        self.logger.debug(
-                            "[{}] [{}/{}] ... matched, not wanted on this host".format(
-                                self.cloud_name, self.controller_name, self.model_name
-                            )
-                        )
+                        self._log_with_header("... matched, not wanted on this host")
                         continue
                 elif where == "host only":
-                    self.logger.debug(
-                        "[{}] [{}/{}] requirement is 'host only' form....".format(
-                            self.cloud_name, self.controller_name, self.model_name
-                        )
+                    self._log_with_header(
+                        "requirement is 'host only' form...."
                     )
                     if is_container(machine):
-                        self.logger.debug(
-                            "[{}] [{}/{}] ... and we are a container, checking".format(
-                                self.cloud_name, self.controller_name, self.model_name
-                            )
-                        )
+                        self._log_with_header("... and we are a container, checking")
                         # XXX check alternate names?
                         if required_sub in present_subs:
-                            self.logger.debug(
-                                "[{}] [{}/{}] ... found extraneous sub".format(
-                                    self.cloud_name,
-                                    self.controller_name,
-                                    self.model_name,
-                                )
-                            )
+                            self._log_with_header("... found extraneous sub")
                             for app in self.model.apps_on_machines[machine]:
                                 self.model.extraneous_subs[required_sub].add(app)
                         continue
-                    self.logger.debug(
-                        "[{}] [{}/{}] ... and we are a host, will fallthrough".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                        )
-                    )
+                    self._log_with_header("... and we are a host, will fallthrough")
+
                 elif where == "all or nothing" and required_sub not in all_or_nothing:
-                    self.logger.debug(
-                        "[{}] [{}/{}] requirement is 'all or nothing' and was 'nothing'.".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                        )
+                    self._log_with_header(
+                        "requirement is 'all or nothing' and was 'nothing'."
                     )
                     continue
                 # At this point we know we require the subordinate - we might just
                 # need to change the name we expect to see it as
                 elif where == "container aware":
-                    self.logger.debug(
-                        "[{}] [{}/{}] requirement is 'container aware'.".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                        )
-                    )
+                    self._log_with_header("requirement is 'container aware'.")
                     if is_container(machine):
                         suffixes = self.lint_rules["subordinates"][required_sub][
                             "container-suffixes"
@@ -547,38 +456,17 @@ class Linter:
                         suffixes = self.lint_rules["subordinates"][required_sub][
                             "host-suffixes"
                         ]
-                    self.logger.debug(
-                        "[{}] [{}/{}] -> suffixes == {}".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                            suffixes,
-                        )
-                    )
+                    self._log_with_header("-> suffixes == {}".format(suffixes))
                     exceptions = []
                     if "exceptions" in self.lint_rules["subordinates"][required_sub]:
                         exceptions = self.lint_rules["subordinates"][required_sub][
                             "exceptions"
                         ]
-                        self.logger.debug(
-                            "[{}] [{}/{}] -> exceptions == {}".format(
-                                self.cloud_name,
-                                self.controller_name,
-                                self.model_name,
-                                exceptions,
-                            )
-                        )
+                        self._log_with_header("-> exceptions == {}".format(exceptions))
                     found = False
                     for suffix in suffixes:
                         looking_for = "{}-{}".format(required_sub, suffix)
-                        self.logger.debug(
-                            "[{}] [{}/{}] -> Looking for {}".format(
-                                self.cloud_name,
-                                self.controller_name,
-                                self.model_name,
-                                looking_for,
-                            )
-                        )
+                        self._log_with_header("-> Looking for {}".format(looking_for))
                         if looking_for in present_subs:
                             self.logger.debug("-> FOUND!!!")
                             self.cloud_name,
@@ -588,44 +476,24 @@ class Linter:
                     if not found:
                         for sub in present_subs:
                             if self.model.app_to_charm[sub] == required_sub:
-                                self.logger.debug(
-                                    "[{}] [{}/{}] Winner winner, chicken dinner! 🍗 {}".format(
-                                        self.cloud_name,
-                                        self.controller_name,
-                                        self.model_name,
-                                        sub,
-                                    )
+                                self._log_with_header(
+                                    "Winner winner, chicken dinner! 🍗 {}".format(sub)
                                 )
                                 found = True
                     if not found:
                         for exception in exceptions:
                             if exception in apps:
-                                self.logger.debug(
-                                    "[{}] [{}/{}]-> continuing as found exception: {}".format(
-                                        self.cloud_name,
-                                        self.controller_name,
-                                        self.model_name,
-                                        exception,
+                                self._log_with_header(
+                                    "continuing as found exception: {}".format(
+                                        exception
                                     )
                                 )
                                 found = True
                     if not found:
-                        self.logger.debug(
-                            "[{}] [{}/{}] -> NOT FOUND".format(
-                                self.cloud_name,
-                                self.controller_name,
-                                self.model_name,
-                            )
-                        )
+                        self._log_with_header("-> NOT FOUND")
                         for app in self.model.apps_on_machines[machine]:
                             self.model.missing_subs[required_sub].add(app)
-                    self.logger.debug(
-                        "[{}] [{}/{}] -> continue-ing back out...".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                        )
-                    )
+                    self._log_with_header("-> continue-ing back out...")
                     continue
                 elif where not in ["all", "all or nothing"]:
                     self.logger.fubar(
@@ -637,30 +505,15 @@ class Linter:
                             required_sub,
                         )
                     )
-                self.logger.debug(
-                    "[{}] [{}/{}] requirement is 'all' OR we fell through.".format(
-                        self.cloud_name,
-                        self.controller_name,
-                        self.model_name,
-                    )
-                )
+                self._log_with_header("requirement is 'all' OR we fell through.")
                 if required_sub not in present_subs:
                     for sub in present_subs:
                         if self.model.app_to_charm[sub] == required_sub:
-                            self.logger.debug(
+                            self._log_with_header(
                                 "Winner winner, chicken dinner! 🍗 {}".format(sub)
                             )
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
                             continue
-                    self.logger.debug(
-                        "[{}] [{}/{}] not found.".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
-                        )
-                    )
+                    self._log_with_header("not found.")
                     for app in self.model.apps_on_machines[machine]:
                         self.model.missing_subs[required_sub].add(app)
 
@@ -904,10 +757,9 @@ class Linter:
         """Map machines in the model to their availability zone."""
         for machine in machines:
             if "hardware" not in machines[machine]:
-                self.logger.warn(
-                    "[{}] [{}/{}] Machine {} has no hardware info; skipping.".format(
-                        self.cloud_name, self.controller_name, self.model_name, machine
-                    )
+                self._log_with_header(
+                    "Machine {} has no hardware info; skipping.".format(machine),
+                    level=logging.WARN,
                 )
                 continue
 
@@ -920,10 +772,11 @@ class Linter:
                     self.model.machines_to_az[machine] = az
                     break
             if not found_az:
-                self.logger.warn(
-                    "[{}] [{}/{}] Machine {} has no availability-zone info in hardware field; skipping.".format(
-                        self.cloud_name, self.controller_name, self.model_name, machine
-                    )
+                self._log_with_header(
+                    "Machine {} has no availability-zone info in hardware field; skipping.".format(
+                        machine
+                    ),
+                    level=logging.WARN,
                 )
 
     def check_status(self, what, status, expected):
@@ -987,19 +840,16 @@ class Linter:
                         expected=juju_expected,
                     )
                 else:
-                    self.logger.warn(
-                        "[{}] [{}/{}] Could not determine Juju status for {}.".format(
-                            self.cloud_name, self.controller_name, self.model_name, name
-                        )
+                    self._log_with_header(
+                        "Could not determine Juju status for {}.".format(name),
+                        level=logging.WARN,
                     )
         else:
-            self.logger.warn(
-                "[{}] [{}/{}] Could not determine appropriate status key for {}.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
+            self._log_with_header(
+                "Could not determine appropriate status key for {}.".format(
                     name,
-                )
+                ),
+                level=logging.WARN,
             )
 
     def check_statuses(self, juju_status, applications):
@@ -1073,14 +923,12 @@ class Linter:
                 machine = applications[app_name]["units"][unit]["machine"]
                 machine = machine.split("/")[0]
                 if machine not in self.model.machines_to_az:
-                    self.logger.error(
-                        "[{}] [{}/{}] {}: Can't find machine {} in machine to AZ mapping data".format(
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
+                    self._log_with_header(
+                        "{}: Can't find machine {} in machine to AZ mapping data".format(
                             app_name,
                             machine,
-                        )
+                        ),
+                        level=logging.ERROR,
                     )
                     continue
                 az_counter[self.model.machines_to_az[machine]] += 1
@@ -1133,25 +981,14 @@ class Linter:
                 self.check_azs(parsed_yaml[applications])
                 self.check_statuses(parsed_yaml, applications)
             else:
-                self.logger.warn(
-                    (
-                        "[{}] [{}/{}] Relations data found; assuming a bundle and "
-                        "skipping AZ and status checks."
-                    ).format(
-                        self.cloud_name,
-                        self.model_name,
-                        self.controller_name,
-                    )
+                self._log_with_header(
+                    "Relations data found; assuming a bundle and skipping AZ and status checks."
                 )
 
             self.results()
         else:
-            self.logger.warn(
-                "[{}] [{}/{}] Model contains no applications, skipping.".format(
-                    self.cloud_name,
-                    self.controller_name,
-                    self.model_name,
-                )
+            self._log_with_header(
+                "Model contains no applications, skipping.", level=logging.WARN
             )
 
     def collect(self, error):
@@ -1160,11 +997,7 @@ class Linter:
 
     def handle_error(self, error):
         """Collect an error and add it to the collector."""
-        self.logger.error(
-            "[{}] [{}/{}] {}.".format(
-                self.cloud_name, self.controller_name, self.model_name, error["message"]
-            )
-        )
+        self._log_with_header(error["message"], level=logging.ERROR)
         if self.collect_errors:
             self.collect(error)
 
@@ -1184,7 +1017,9 @@ class Linter:
                 try:
                     _, rel_path = line.split()
                 except ValueError:
-                    self.logger.warn("invalid include in rules, ignored: '{}'".format(line))
+                    self.logger.warn(
+                        "invalid include in rules, ignored: '{}'".format(line)
+                    )
                     continue
 
                 include_path = os.path.join(os.path.dirname(self.filename), rel_path)
@@ -1196,3 +1031,12 @@ class Linter:
                 collector.append(line)
 
         return yaml.safe_load("\n".join(collector))
+
+    def _log_with_header(self, msg, level=logging.DEBUG):
+        """Log a message with the cloud/controller/model header."""
+        self.logger.log(
+            "[{}] [{}/{}] {}".format(
+                self.cloud_name, self.controller_name, self.model_name, msg
+            ),
+            level=level,
+        )
