@@ -1,0 +1,9 @@
+openstack config networking: &openstack-config-networking
+ ovn-central:
+  ovsdb-server-election-timer:
+   gte: 4
+
+openstack mandatory charms networking: &openstack-mandatory-charms-networking
+ - ovn-central
+ - ovn-chassis
+ - neutron-api-plugin-ovn

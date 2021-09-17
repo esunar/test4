@@ -118,8 +118,11 @@ class Linter:
     def read_rules(self):
         """Read and parse rules from YAML, optionally processing provided overrides."""
         if os.path.isfile(self.filename):
-            with open(self.filename, "r") as yaml_file:
-                self.lint_rules = yaml.safe_load(yaml_file)
+            with open(self.filename, "r") as rules_file:
+                raw_rules_txt = rules_file.read()
+
+            self.lint_rules = self._process_includes_in_rules(raw_rules_txt)
+
             if self.overrides:
                 for override in self.overrides.split("#"):
                     (name, where) = override.split(":")
@@ -133,9 +136,10 @@ class Linter:
                         )
                     )
                     self.lint_rules["subordinates"][name] = dict(where=where)
-            self.lint_rules["known charms"] = flatten_list(
-                self.lint_rules["known charms"]
-            )
+
+            # Flatten all entries (to account for nesting due to YAML anchors (templating)
+            self.lint_rules = {k: flatten_list(v) for k, v in self.lint_rules.items()}
+
             self.logger.debug(
                 "[{}] [{}/{}] Lint Rules: {}".format(
                     self.cloud_name,
@@ -1163,3 +1167,32 @@ class Linter:
         )
         if self.collect_errors:
             self.collect(error)
+
+    def _process_includes_in_rules(self, yaml_txt):
+        """
+        Process any includes in the rules file.
+
+        Only top level includes are supported (without recursion), with relative paths.
+
+        Example syntax:
+
+        !include foo.yaml
+        """
+        collector = []
+        for line in yaml_txt.splitlines():
+            if line.startswith("!include"):
+                try:
+                    _, rel_path = line.split()
+                except ValueError:
+                    self.logger.warn("invalid include in rules, ignored: '{}'".format(line))
+                    continue
+
+                include_path = os.path.join(os.path.dirname(self.filename), rel_path)
+
+                if os.path.isfile(include_path):
+                    with open(include_path, "r") as f:
+                        collector.append(f.read())
+            else:
+                collector.append(line)
+
+        return yaml.safe_load("\n".join(collector))

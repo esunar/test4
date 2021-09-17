@@ -1,4 +1,5 @@
 ---
+# legacy rules file, there are also more specific configurations available
 kubernetes config:
  kubernetes-master:
   authorization-mode:

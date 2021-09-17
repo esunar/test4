@@ -29,6 +29,10 @@ class InvalidCharmNameError(Exception):
 
 def flatten_list(lumpy_list):
     """Flatten a list potentially containing other lists."""
+    # Ensure we only operate on lists, otherwise will affect other iterables
+    if not isinstance(lumpy_list, list):
+        return lumpy_list
+
     flat_list = []
     for item in lumpy_list:
         if not isinstance(item, list):

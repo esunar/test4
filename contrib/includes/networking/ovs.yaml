@@ -1,0 +1,4 @@
+openstack config networking: &openstack-config-networking {}
+
+openstack mandatory charms networking: &openstack-mandatory-charms-networking
+ - neutron-openvswitch
