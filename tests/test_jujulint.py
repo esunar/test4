@@ -280,6 +280,61 @@ class TestLinter:
         assert errors[0]["machines"] == "0"
         assert errors[0]["subordinate"] == "ntp"
 
+    def test_subordinate_duplicates_allow(self, linter, juju_status):
+        """
+        Test the subordinate option "allow-multiple".
+
+        Setting it to true will skip the duplicate check for subordinates
+        """
+        template_status = {
+            "juju-status": {"current": "idle"},
+            "workload-status": {"current": "active"},
+        }
+
+        # Drop the fixture ntp rule and add the nrpe rule with allowing duplicates
+        linter.lint_rules["subordinates"].pop("ntp")
+        linter.lint_rules["subordinates"]["nrpe"] = {
+            "where": "container aware",
+            "host-suffixes": "[host, physical, guest]",
+            "allow-multiple": True,
+        }
+
+        # Add a nrpe-host subordinate application
+        linter.lint_rules["known charms"].append("nrpe")
+        juju_status["applications"]["nrpe-host"] = {
+            "application-status": {"current": "active"},
+            "charm": "cs:nrpe-74",
+            "charm-name": "nrpe",
+            "relations": {"juju-info": ["ubuntu", "ubuntu2"]},
+        }
+
+        # Add a nrpe-host subordinate unit to the 'ubuntu' app
+        juju_status["applications"]["ubuntu"]["units"]["ubuntu/0"]["subordinates"] = {
+            "nrpe-host/0": template_status
+        }
+
+        # Add a second 'ubuntu' app with nrpe subordinate
+        juju_status["applications"]["ubuntu2"] = {
+            "application-status": {"current": "active"},
+            "charm": "cs:ubuntu-18",
+            "charm-name": "ubuntu",
+            "relations": {"juju-info": ["ntp", "nrpe-host"]},
+            "units": {
+                "ubuntu2/0": {
+                    "juju-status": {"current": "idle"},
+                    "machine": "0",
+                    "subordinates": {"nrpe-host/1": template_status},
+                    "workload-status": {"current": "active"},
+                }
+            },
+        }
+
+        linter.do_lint(juju_status)
+
+        # Since we allow duplicates there should be no errors
+        errors = linter.output_collector["errors"]
+        assert not errors
+
     def test_ops_subordinate_metal_only1(self, linter, juju_status):
         """
         Test that missing ops subordinate charms are detected.
@@ -305,7 +360,9 @@ class TestLinter:
         linter.lint_rules["subordinates"]["hw-health"] = {"where": "metal only"}
 
         # Turn machine "0" into a "VM"
-        juju_status["machines"]["0"]["hardware"] = "tags=virtual availability-zone=rack-1"
+        juju_status["machines"]["0"][
+            "hardware"
+        ] = "tags=virtual availability-zone=rack-1"
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]

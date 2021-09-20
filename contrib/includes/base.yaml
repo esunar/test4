@@ -29,6 +29,7 @@ subordinates:
   host-suffixes: [host, physical, guest]
   container-suffixes: [lxd, container]
   exceptions: [nagios]
+  allow-multiple: true  # There can be multiple nrpe units, see LP#1855858
  ntp:
   # You don't want NTP in a container dueling with ntp in the host
   where: host only

@@ -150,8 +150,6 @@ class Linter:
         if "units" not in app_d:
             return
         for unit in app_d["units"]:
-            # juju_status = app_d["units"][unit]["juju-status"]
-            # workload_status = app_d["units"][unit]["workload-status"]
             if "subordinates" in app_d["units"][unit]:
                 subordinates = app_d["units"][unit]["subordinates"].keys()
                 subordinates = [i.split("/")[0] for i in subordinates]
@@ -162,8 +160,11 @@ class Linter:
             self.model.subs_on_machines.setdefault(machine, set())
             for sub in subordinates:
                 if sub in self.model.subs_on_machines[machine]:
-                    self.model.duelling_subs.setdefault(sub, set())
-                    self.model.duelling_subs[sub].add(machine)
+                    charm = self.model.app_to_charm[sub]
+                    allow_multiple = self.lint_rules['subordinates'][charm].get("allow-multiple")
+                    if not allow_multiple:
+                        self.model.duelling_subs.setdefault(sub, set())
+                        self.model.duelling_subs[sub].add(machine)
                 self.model.subs_on_machines[machine].add(sub)
             self.model.subs_on_machines[machine] = (
                 set(subordinates) | self.model.subs_on_machines[machine]
