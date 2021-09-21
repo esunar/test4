@@ -98,6 +98,12 @@ def juju_status():
                     }
                 },
             },
+            "ntp": {
+                "application-status": {"current": "active"},
+                "charm": "cs:ntp-47",
+                "charm-name": "ntp",
+                "relations": {"juju-info": ["ubuntu"]},
+            },
         },
         "machines": {
             "0": {

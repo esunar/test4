@@ -33,7 +33,7 @@ import attr
 import dateutil.parser
 from dateutil import relativedelta
 
-from jujulint.util import flatten_list, is_container, extract_charm_name
+import jujulint.util as utils
 from jujulint.logging import Logger
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
@@ -133,7 +133,9 @@ class Linter:
                     self.lint_rules["subordinates"][name] = dict(where=where)
 
             # Flatten all entries (to account for nesting due to YAML anchors (templating)
-            self.lint_rules = {k: flatten_list(v) for k, v in self.lint_rules.items()}
+            self.lint_rules = {
+                k: utils.flatten_list(v) for k, v in self.lint_rules.items()
+            }
 
             self._log_with_header(
                 "Lint Rules: {}".format(pprint.pformat(self.lint_rules))
@@ -148,8 +150,6 @@ class Linter:
         if "units" not in app_d:
             return
         for unit in app_d["units"]:
-            # juju_status = app_d["units"][unit]["juju-status"]
-            # workload_status = app_d["units"][unit]["workload-status"]
             if "subordinates" in app_d["units"][unit]:
                 subordinates = app_d["units"][unit]["subordinates"].keys()
                 subordinates = [i.split("/")[0] for i in subordinates]
@@ -160,8 +160,11 @@ class Linter:
             self.model.subs_on_machines.setdefault(machine, set())
             for sub in subordinates:
                 if sub in self.model.subs_on_machines[machine]:
-                    self.model.duelling_subs.setdefault(sub, set())
-                    self.model.duelling_subs[sub].add(machine)
+                    charm = self.model.app_to_charm[sub]
+                    allow_multiple = self.lint_rules['subordinates'][charm].get("allow-multiple")
+                    if not allow_multiple:
+                        self.model.duelling_subs.setdefault(sub, set())
+                        self.model.duelling_subs[sub].add(machine)
                 self.model.subs_on_machines[machine].add(sub)
             self.model.subs_on_machines[machine] = (
                 set(subordinates) | self.model.subs_on_machines[machine]
@@ -372,7 +375,7 @@ class Linter:
                 )
                 continue
 
-            charm_name = extract_charm_name(applications[application]["charm"])
+            charm_name = utils.extract_charm_name(applications[application]["charm"])
             if "config" in self.lint_rules:
                 if charm_name in self.lint_rules["config"]:
                     lint_rules = self.lint_rules["config"][charm_name].items()
@@ -393,7 +396,7 @@ class Linter:
                         lint_rules,
                     )
 
-    def check_subs(self):
+    def check_subs(self, machines_data):
         """Check the subordinates in the model."""
         all_or_nothing = set()
         for machine in self.model.subs_on_machines:
@@ -429,7 +432,7 @@ class Linter:
                     self._log_with_header(
                         "requirement is 'host only' form...."
                     )
-                    if is_container(machine):
+                    if utils.is_container(machine):
                         self._log_with_header("... and we are a container, checking")
                         # XXX check alternate names?
                         if required_sub in present_subs:
@@ -438,6 +441,18 @@ class Linter:
                                 self.model.extraneous_subs[required_sub].add(app)
                         continue
                     self._log_with_header("... and we are a host, will fallthrough")
+                elif where == "metal only":
+                    self._log_with_header(
+                        "requirement is 'metal only' form...."
+                    )
+                    if not utils.is_metal(machine, machines_data.get(machine, {})):
+                        self._log_with_header("... and we are not a metal, checking")
+                        if required_sub in present_subs:
+                            self._log_with_header("... found extraneous sub")
+                            for app in self.model.apps_on_machines[machine]:
+                                self.model.extraneous_subs[required_sub].add(app)
+                        continue
+                    self._log_with_header("... and we are a metal, will fallthrough")
 
                 elif where == "all or nothing" and required_sub not in all_or_nothing:
                     self._log_with_header(
@@ -448,7 +463,7 @@ class Linter:
                 # need to change the name we expect to see it as
                 elif where == "container aware":
                     self._log_with_header("requirement is 'container aware'.")
-                    if is_container(machine):
+                    if utils.is_container(machine):
                         suffixes = self.lint_rules["subordinates"][required_sub][
                             "container-suffixes"
                         ]
@@ -719,7 +734,7 @@ class Linter:
         """Process applications in the model, validating and normalising the names."""
         for app in applications:
             if "charm" in applications[app]:
-                charm_name = extract_charm_name(applications[app]["charm"])
+                charm_name = utils.extract_charm_name(applications[app]["charm"])
                 self.model.charms.add(charm_name)
                 self.model.app_to_charm[app] = charm_name
             else:
@@ -973,7 +988,7 @@ class Linter:
             for app in parsed_yaml[applications]:
                 self.process_subordinates(parsed_yaml[applications][app], app)
 
-            self.check_subs()
+            self.check_subs(parsed_yaml["machines"])
             self.check_charms()
 
             if "relations" not in parsed_yaml:

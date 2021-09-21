@@ -50,13 +50,35 @@ def is_container(machine):
         return False
 
 
+def is_virtual_machine(machine, machine_data):
+    """
+    Check if a provided machine is a VM.
+
+    It is not straightforward to determine if a machine is a VM from juju data
+    (bundle/juju status). In some cases a "hardware" key is provided (jsfy),
+    and in those cases we can check for the keyword "virtual" since some
+    provisioners include a tag there (FCE). We use that criteria as a best
+    effort attempt to determine if the machine is a VM.
+    """
+    hardware = machine_data.get("hardware")
+    return bool(hardware and "virtual" in hardware)
+
+
+def is_metal(machine, machine_data):
+    """
+    Check if a provided machine is a bare metal host.
+
+    Leverages the other detection methods, if the others fail (e.g. not a
+    container or VM), we consider the machine to be bare metal.
+    """
+    return not (is_container(machine) or is_virtual_machine(machine, machine_data))
+
+
 def extract_charm_name(charm):
     """Extract the charm name using regex."""
     match = re.match(
         r"^(?:\w+:)?(?:~[\w\.-]+/)?(?:\w+/)?([a-zA-Z0-9-]+?)(?:-\d+)?$", charm
     )
     if not match:
-        raise InvalidCharmNameError(
-            "charm name '{}' is invalid".format(charm)
-        )
+        raise InvalidCharmNameError("charm name '{}' is invalid".format(charm))
     return match.group(1)

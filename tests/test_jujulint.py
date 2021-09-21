@@ -5,41 +5,59 @@ from datetime import datetime, timezone
 import pytest
 
 
-def test_flatten_list(utils):
-    """Test the utils flatten_list function."""
-    unflattened_list = [1, [2, 3]]
-    flattened_list = [1, 2, 3]
-    assert flattened_list == utils.flatten_list(unflattened_list)
+class TestUtils:
+    """Test the jujulint utilities."""
 
-    unflattened_list = [1, [2, [3, 4]]]
-    flattened_list = [1, 2, 3, 4]
-    assert flattened_list == utils.flatten_list(unflattened_list)
+    def test_flatten_list(self, utils):
+        """Test the utils flatten_list function."""
+        unflattened_list = [1, [2, 3]]
+        flattened_list = [1, 2, 3]
+        assert flattened_list == utils.flatten_list(unflattened_list)
 
+        unflattened_list = [1, [2, [3, 4]]]
+        flattened_list = [1, 2, 3, 4]
+        assert flattened_list == utils.flatten_list(unflattened_list)
 
-def test_flatten_list_non_list_iterable(utils):
-    """Test the utils flatten_list function."""
-    iterable = {1: 2}
-    assert iterable == utils.flatten_list(iterable)
+    def test_flatten_list_non_list_iterable(self, utils):
+        """Test the utils flatten_list function."""
+        iterable = {1: 2}
+        assert iterable == utils.flatten_list(iterable)
 
+    def test_is_container(self, utils):
+        """Test the utils is_container function."""
+        assert utils.is_container("1/lxd/0") is True
+        assert utils.is_container("0") is False
 
-def test_map_charms(linter, utils):
-    """Test the charm name validation code."""
-    applications = {
-        "test-app-1": {"charm": "cs:~USER/SERIES/TEST-CHARM12-123"},
-        "test-app-2": {"charm": "cs:~USER/TEST-CHARM12-123"},
-        "test-app-3": {"charm": "cs:TEST-CHARM12-123"},
-        "test-app-4": {"charm": "local:SERIES/TEST-CHARM12"},
-        "test-app-5": {"charm": "local:TEST-CHARM12"},
-        "test-app-6": {"charm": "cs:~TEST-CHARMERS/TEST-CHARM12-123"},
-    }
-    linter.map_charms(applications)
-    for charm in linter.model.charms:
-        assert "TEST-CHARM12" == charm
-    applications = {
-        "test-app1": {"charm": "cs:invalid-charm$"},
-    }
-    with pytest.raises(utils.InvalidCharmNameError):
-        linter.map_charms(applications)
+    def test_is_virtual_machine(self, utils):
+        """Test the utils is_virtual_machine function."""
+        machine = "0"
+        machine_data = {
+            "hardware": "arch=amd64 cores=2 mem=4096M tags=virtual,pod-console-logging,vault availability-zone=AZ3"
+        }
+        assert utils.is_virtual_machine(machine, machine_data) is True
+
+        machine_data = {}
+        assert utils.is_virtual_machine(machine, machine_data) is False
+
+    def test_is_metal(self, utils):
+        """Test the utils is_metal function."""
+        # A VM should return false
+        machine = "0"
+        machine_data = {
+            "hardware": "arch=amd64 cores=2 mem=4096M tags=virtual,pod-console-logging,vault availability-zone=AZ3"
+        }
+        assert utils.is_metal(machine, machine_data) is False
+
+        # A container should return false
+        assert utils.is_metal("1/lxd/0", {}) is False
+
+        # A bare metal should return true
+        machine = "1"
+        machine_data = {
+            "hardware": "arch=amd64 cores=128 mem=2093056M tags=foundation-nodes,hyper-converged-az2 "
+            "availability-zone=AZ2"
+        }
+        assert utils.is_metal(machine, machine_data) is True
 
 
 class TestLinter:
@@ -76,6 +94,25 @@ class TestLinter:
         assert len(errors) == 1
         assert errors[0]["id"] == "charm-not-mapped"
         assert errors[0]["application"] == "ubuntu2"
+
+    def test_map_charms(self, linter, utils):
+        """Test the charm name validation code."""
+        applications = {
+            "test-app-1": {"charm": "cs:~USER/SERIES/TEST-CHARM12-123"},
+            "test-app-2": {"charm": "cs:~USER/TEST-CHARM12-123"},
+            "test-app-3": {"charm": "cs:TEST-CHARM12-123"},
+            "test-app-4": {"charm": "local:SERIES/TEST-CHARM12"},
+            "test-app-5": {"charm": "local:TEST-CHARM12"},
+            "test-app-6": {"charm": "cs:~TEST-CHARMERS/TEST-CHARM12-123"},
+        }
+        linter.map_charms(applications)
+        for charm in linter.model.charms:
+            assert "TEST-CHARM12" == charm
+        applications = {
+            "test-app1": {"charm": "cs:invalid-charm$"},
+        }
+        with pytest.raises(utils.InvalidCharmNameError):
+            linter.map_charms(applications)
 
     def test_juju_status_unexpected(self, linter, juju_status):
         """Test that juju and workload status is expected."""
@@ -243,6 +280,94 @@ class TestLinter:
         assert errors[0]["machines"] == "0"
         assert errors[0]["subordinate"] == "ntp"
 
+    def test_subordinate_duplicates_allow(self, linter, juju_status):
+        """
+        Test the subordinate option "allow-multiple".
+
+        Setting it to true will skip the duplicate check for subordinates
+        """
+        template_status = {
+            "juju-status": {"current": "idle"},
+            "workload-status": {"current": "active"},
+        }
+
+        # Drop the fixture ntp rule and add the nrpe rule with allowing duplicates
+        linter.lint_rules["subordinates"].pop("ntp")
+        linter.lint_rules["subordinates"]["nrpe"] = {
+            "where": "container aware",
+            "host-suffixes": "[host, physical, guest]",
+            "allow-multiple": True,
+        }
+
+        # Add a nrpe-host subordinate application
+        linter.lint_rules["known charms"].append("nrpe")
+        juju_status["applications"]["nrpe-host"] = {
+            "application-status": {"current": "active"},
+            "charm": "cs:nrpe-74",
+            "charm-name": "nrpe",
+            "relations": {"juju-info": ["ubuntu", "ubuntu2"]},
+        }
+
+        # Add a nrpe-host subordinate unit to the 'ubuntu' app
+        juju_status["applications"]["ubuntu"]["units"]["ubuntu/0"]["subordinates"] = {
+            "nrpe-host/0": template_status
+        }
+
+        # Add a second 'ubuntu' app with nrpe subordinate
+        juju_status["applications"]["ubuntu2"] = {
+            "application-status": {"current": "active"},
+            "charm": "cs:ubuntu-18",
+            "charm-name": "ubuntu",
+            "relations": {"juju-info": ["ntp", "nrpe-host"]},
+            "units": {
+                "ubuntu2/0": {
+                    "juju-status": {"current": "idle"},
+                    "machine": "0",
+                    "subordinates": {"nrpe-host/1": template_status},
+                    "workload-status": {"current": "active"},
+                }
+            },
+        }
+
+        linter.do_lint(juju_status)
+
+        # Since we allow duplicates there should be no errors
+        errors = linter.output_collector["errors"]
+        assert not errors
+
+    def test_ops_subordinate_metal_only1(self, linter, juju_status):
+        """
+        Test that missing ops subordinate charms are detected.
+
+        Use the "metal only" rule in a bare metal machine, should report the
+        missing subordinate
+        """
+        linter.lint_rules["subordinates"]["hw-health"] = {"where": "metal only"}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "ops-subordinate-missing"
+        assert errors[0]["principals"] == "ubuntu"
+        assert errors[0]["subordinate"] == "hw-health"
+
+    def test_ops_subordinate_metal_only2(self, linter, juju_status):
+        """
+        Test that missing ops subordinate charms are detected.
+
+        Use the "metal only" rule in a VM, should ignore it
+        """
+        linter.lint_rules["subordinates"]["hw-health"] = {"where": "metal only"}
+
+        # Turn machine "0" into a "VM"
+        juju_status["machines"]["0"][
+            "hardware"
+        ] = "tags=virtual availability-zone=rack-1"
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert not errors
+
     def test_openstack_charm_missing(self, linter, juju_status):
         """Test that missing openstack mandatory charms are detected."""
         linter.cloud_type = "openstack"
@@ -286,6 +411,7 @@ class TestLinter:
         linter.cloud_type = "kubernetes"
         linter.lint_rules["kubernetes mandatory"] = []
         linter.lint_rules["operations kubernetes mandatory"] = ["ntp"]
+        juju_status["applications"].pop("ntp")  # drop the app from the model
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
