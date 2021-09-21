@@ -433,6 +433,74 @@ class TestLinter:
         assert errors[0]["expected_value"] is False
         assert errors[0]["actual_value"] is True
 
+    def test_config_eq_suffix_match(self, linter, juju_status):
+        """Test the config condition 'eq'. when suffix matches."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake-opt": {"eq": False, "suffixes": ["host", "physical"]}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        juju_status["applications"]["ubuntu-host"] = juju_status["applications"].pop(
+            "ubuntu"
+        )
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "config-eq-check"
+        assert errors[0]["application"] == "ubuntu-host"
+        assert errors[0]["rule"] == "fake-opt"
+        assert errors[0]["expected_value"] is False
+        assert errors[0]["actual_value"] is True
+
+    def test_config_eq_suffix_match_charm_name(self, linter, juju_status):
+        """Test the config condition 'eq'. when suffix and base charm name."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake-opt": {"eq": False, "suffixes": ["host", "physical"]}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "config-eq-check"
+        assert errors[0]["application"] == "ubuntu"
+        assert errors[0]["rule"] == "fake-opt"
+        assert errors[0]["expected_value"] is False
+        assert errors[0]["actual_value"] is True
+
+    def test_config_eq_suffix_skip(self, linter, juju_status):
+        """Test the config condition 'eq'. when suffix doesn't match."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake-opt": {"eq": False, "suffixes": ["host", "physical"]}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        juju_status["applications"]["ubuntu-container"] = juju_status[
+            "applications"
+        ].pop("ubuntu")
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert not errors
+
+    def test_config_eq_no_suffix_check_all(self, linter, juju_status):
+        """Test the config condition 'eq'. when no suffix all should be checked."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake-opt": {"eq": False}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        juju_status["applications"]["ubuntu-host"] = juju_status["applications"].pop(
+            "ubuntu"
+        )
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "config-eq-check"
+        assert errors[0]["application"] == "ubuntu-host"
+        assert errors[0]["rule"] == "fake-opt"
+        assert errors[0]["expected_value"] is False
+        assert errors[0]["actual_value"] is True
+
     def test_config_neq_valid(self, linter, juju_status):
         """Test the config condition 'neq'."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": "foo"}}}
