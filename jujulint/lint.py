@@ -161,7 +161,9 @@ class Linter:
             for sub in subordinates:
                 if sub in self.model.subs_on_machines[machine]:
                     charm = self.model.app_to_charm[sub]
-                    allow_multiple = self.lint_rules['subordinates'][charm].get("allow-multiple")
+                    allow_multiple = self.lint_rules["subordinates"][charm].get(
+                        "allow-multiple"
+                    )
                     if not allow_multiple:
                         self.model.duelling_subs.setdefault(sub, set())
                         self.model.duelling_subs[sub].add(machine)
@@ -341,20 +343,42 @@ class Linter:
             )
         return False
 
-    def check_config(self, name, config, rules):
+    def check_config(self, app_name, config, rules):
         """Check application against provided rules."""
         rules = dict(rules)
         for rule in rules:
-            self._log_with_header("Checking {} for configuration {}".format(name, rule))
+            self._log_with_header(
+                "Checking {} for configuration {}".format(app_name, rule)
+            )
+
+            # Handle app suffix for config checks. If the suffix is provided
+            # and it does not match, then we skip the check. LP#1944406
+            # The base charm name is always checked if present.
+            suffixes = rules[rule].pop("suffixes", [])
+            if suffixes:
+                charm_name = self.model.app_to_charm[app_name]
+                target_app_names = [
+                    "{}-{}".format(charm_name, suffix) for suffix in suffixes
+                ]
+                target_app_names.append(charm_name)
+
+                if app_name not in target_app_names:
+                    self._log_with_header(
+                        "The app name didn't match any name target for this charm: '{}' (skipping check)".format(
+                            app_name
+                        )
+                    )
+                    continue
+
             for check_op, check_value in rules[rule].items():
                 # check_op should be the operator name, e.g. (eq, neq, gte, isset)
                 if check_op in VALID_CONFIG_CHECKS:
                     check_method = getattr(self, check_op)
-                    check_method(name, check_value, rule, config)
+                    check_method(app_name, check_value, rule, config)
                 else:
                     self._log_with_header(
                         "Application {} has unknown check operation for {}: {}.".format(
-                            name,
+                            app_name,
                             rule,
                             check_op,
                         ),
@@ -429,9 +453,7 @@ class Linter:
                         self._log_with_header("... matched, not wanted on this host")
                         continue
                 elif where == "host only":
-                    self._log_with_header(
-                        "requirement is 'host only' form...."
-                    )
+                    self._log_with_header("requirement is 'host only' form....")
                     if utils.is_container(machine):
                         self._log_with_header("... and we are a container, checking")
                         # XXX check alternate names?
@@ -442,9 +464,7 @@ class Linter:
                         continue
                     self._log_with_header("... and we are a host, will fallthrough")
                 elif where == "metal only":
-                    self._log_with_header(
-                        "requirement is 'metal only' form...."
-                    )
+                    self._log_with_header("requirement is 'metal only' form....")
                     if not utils.is_metal(machine, machines_data.get(machine, {})):
                         self._log_with_header("... and we are not a metal, checking")
                         if required_sub in present_subs:
@@ -483,10 +503,7 @@ class Linter:
                         looking_for = "{}-{}".format(required_sub, suffix)
                         self._log_with_header("-> Looking for {}".format(looking_for))
                         if looking_for in present_subs:
-                            self.logger.debug("-> FOUND!!!")
-                            self.cloud_name,
-                            self.controller_name,
-                            self.model_name,
+                            self._log_with_header("-> FOUND!!!")
                             found = True
                     if not found:
                         for sub in present_subs:

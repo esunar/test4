@@ -8,8 +8,10 @@ config:
  nrpe:
   lacp_bonds:
    neq: ""
+   suffixes: [host, physical]
   netlinks:
    neq: ""
+   suffixes: [host, physical]
  landscape-client:
   disable-unattended-upgrades:
    eq: true
