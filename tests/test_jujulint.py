@@ -104,6 +104,7 @@ class TestLinter:
             "test-app-4": {"charm": "local:SERIES/TEST-CHARM12"},
             "test-app-5": {"charm": "local:TEST-CHARM12"},
             "test-app-6": {"charm": "cs:~TEST-CHARMERS/TEST-CHARM12-123"},
+            "test-app-7": {"charm": "ch:amd64/bionic/TEST-CHARM12-123"}
         }
         linter.map_charms(applications)
         for charm in linter.model.charms:
