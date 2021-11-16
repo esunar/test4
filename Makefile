@@ -10,3 +10,10 @@ deb-src:
 
 test:
 	tox -e unit
+
+build:
+	snapcraft --use-lxd --debug
+
+clean:
+	snapcraft clean --use-lxd
+
