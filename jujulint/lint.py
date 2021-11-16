@@ -969,16 +969,36 @@ class Linter:
                 if num_this_az < min_per_az:
                     self.model.az_unbalanced_apps[app_name] = [num_units, az_counter]
 
-    def lint_yaml_string(self, yaml):
+    # Juju now creates multiple documents within a single export-bundle file
+    #   This is to support offer overlays
+    #   This occurs with the format string "--- # overlay.yaml"
+    def get_main_bundle_doc(self, parsed_yaml_docs):
+        """Get main bundle document from yaml input that may contain mutiple documents."""
+        parsed_yaml = None
+
+        parsed_doc_list = list(parsed_yaml_docs)
+        for doc in parsed_doc_list:
+            offer_overlay = False
+            applications = doc["applications"]
+            for app in applications:
+                if "offers" in doc["applications"][app]:
+                    offer_overlay = True
+            if parsed_yaml is None or not offer_overlay:
+                parsed_yaml = doc
+        return(parsed_yaml)
+
+    def lint_yaml_string(self, yaml_string):
         """Lint provided YAML string."""
-        parsed_yaml = yaml.safe_load(yaml)
+        parsed_yaml_docs = yaml.safe_load_all(yaml_string)
+        parsed_yaml = self.get_main_bundle_doc(parsed_yaml_docs)
         return self.do_lint(parsed_yaml)
 
     def lint_yaml_file(self, filename):
         """Load and lint provided YAML file."""
         if filename:
             with open(filename, "r") as infile:
-                parsed_yaml = yaml.safe_load(infile.read())
+                parsed_yaml_docs = yaml.safe_load_all(infile.read())
+                parsed_yaml = self.get_main_bundle_doc(parsed_yaml_docs)
                 if parsed_yaml:
                     return self.do_lint(parsed_yaml)
         self.logger.fubar("Failed to parse YAML from file {}".format(filename))
