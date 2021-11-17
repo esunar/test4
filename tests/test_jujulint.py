@@ -225,6 +225,43 @@ class TestLinter:
         assert errors[0]["id"] == "ops-charm-missing"
         assert errors[0]["charm"] == "telegraf"
 
+    def test_overlay_documents(self, linter, tmp_path):
+        """Test offer overlay format for saas cross model offers."""
+        # juju now exports two documents to exported files.
+        #  We need to ignore the overlay document and still parse the main yaml doc
+        yaml = """
+applications:
+  grafana:
+    charm: cs:grafana-51
+    channel: stable
+    num_units: 1
+    to:
+    - 0
+    options:
+      install_method: snap
+    bindings:
+      "": oam-space
+machines:
+   0:
+    constraints: tags=nagios spaces=oam-space
+    series: bionic
+--- # overlay.yaml
+applications:
+    grafana:
+      offers:
+       grafana:
+         endpoints:
+         - dashboards
+         acl:
+          admin: admin"""
+
+        linter.lint_yaml_string(yaml)
+
+        yaml_path = tmp_path / "bundle.yaml"
+        yaml_path.write_text(yaml)
+
+        linter.lint_yaml_file(yaml_path)
+
     def test_unrecognised_charm(self, linter, juju_status):
         """Test that unrecognised charms are detected."""
         # drop 'ubuntu' from the known charms
