@@ -41,3 +41,5 @@ subordinates:
   where: metal only
  logrotated:
   where: all
+ local-users:
+  where: all or nothing

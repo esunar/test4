@@ -44,6 +44,7 @@ operations optional subordinates: &operations-optional-subs
  - logrotate-charm
  - advanced-routing
  - rsyslog-forwarder-ha
+ - local-users
 
 operations kubernetes mandatory: &operations-kubernetes-mandatory-charms
  - kubernetes-service-checks
