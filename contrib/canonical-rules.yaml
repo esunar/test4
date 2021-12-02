@@ -91,6 +91,8 @@ subordinates:
   where: host only
  logrotated:
   where: all
+ local-users:
+  where: all or nothing
 
 kubernetes mandatory: &kubernetes-mandatory-charms
  - containerd
@@ -155,6 +157,7 @@ operations optional subordinates: &operations-optional-subs
  - logrotate-charm
  - advanced-routing
  - rsyslog-forwarder-ha
+ - local-users
 
 operations charms: &operations-charms
  - *operations-kubernetes-mandatory-charms
