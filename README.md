@@ -9,9 +9,10 @@ To generate a status if you just want to audit placement:
 
     juju status --format yaml > status.yaml
 
-For auditing configuration, you would want:
+For auditing configuration, you would want (you need charm defaults to avoid
+false positives):
 
-    juju export-bundle > bundle.yaml
+    juju export-bundle --include-charm-defaults > bundle.yaml
 
 Then run `juju-lint` (using a rules file of `lint-rules.yaml`):
 
