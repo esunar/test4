@@ -39,6 +39,17 @@ To use a different rules file:
 
 For all other options, consult `juju-lint --help`
 
+== Example ==
+
+A typical use case is linting an openstack cloud:
+
+    juju status -m openstack --format=json > juju-status.json
+    juju export-bundle --include-charm-defaults -m openstack > bundle.yaml
+    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+        -t openstack juju-status.json
+    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+        -t openstack bundle.yaml
+
 == Rules File ==
 
 For an example of a rules file, see `example-lint-rules.yaml`.
