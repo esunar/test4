@@ -2,8 +2,8 @@
 
 == Introduction ==
 
-This is intended to be run against a yaml dump of Juju status, a YAML dump of
-a juju bundle or a remote cloud or clouds via SSH.
+This is intended to be run against a yaml or json dump of Juju status, a YAML
+dump of a juju bundle, or a remote cloud or clouds via SSH.
 
 To generate a status if you just want to audit placement:
 
@@ -16,12 +16,12 @@ false positives):
 
 Then run `juju-lint` (using a rules file of `lint-rules.yaml`):
 
-    juju-lint -f status.yaml (or bundle.yaml)
+    juju-lint status.yaml (or bundle.yaml)
 
 You can also enable additional checks for specific cloud types by specifying
 the cloud type with `-t` as such:
 
-    juju-lint -f bundle.yaml -t openstack
+    juju-lint -t openstack bundle.yaml
 
 For remote or mass audits, you can remote audit clouds via SSH.
 To do this, you will need to add the clouds to your config file in:
@@ -38,6 +38,17 @@ To use a different rules file:
     juju-lint -c my-rules.yaml
 
 For all other options, consult `juju-lint --help`
+
+== Example ==
+
+A typical use case is linting an openstack cloud:
+
+    juju status -m openstack --format=json > juju-status.json
+    juju export-bundle --include-charm-defaults -m openstack > bundle.yaml
+    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+        -t openstack juju-status.json
+    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+        -t openstack bundle.yaml
 
 == Rules File ==
 
