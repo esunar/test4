@@ -62,7 +62,35 @@ Supported top-level options for your rules file:
  4. `openstack [mandatory|optional|subordinate]`
  5. `config` - application configuration auditing
  6. `[openstack|kubernetes] config` - config auditing for specific cloud types.
- 7. `!include <relative path>` - Extension to yaml to include files.
+ 7. `space checks` - enforce/ignore checks for relation binding space
+    mismatches.
+ 8. `!include <relative path>` - Extension to yaml to include files.
+
+ === Space checks ===
+
+All relations defined within a bundle, except for cross-model relationships,
+will be checked for mismatches of their space bindings.  By default, mismatches
+are logged as warnings as this is not necessarily a critical error.
+
+The following options are available to either log such mismatches as errors or
+to ignore them entirely:
+
+ 1. `enforce endpoints` - A list of <charm>:<endpoint> strings.  If a mismatch
+    matches one of these endpoints, it will be flagged as an error.
+ 2. `enforce relations` - A list of two-item <charm>:<endpoint> string lists,
+    representing the two linked endpoints of a relation.  If a mismatch
+    matches one of these relations, it will be flagged as an error.
+ 1. `ignore endpoints` - A list of <charm>:<endpoint> strings.  If a mismatch
+    matches one of these endpoints, it will be ignored.
+ 1. `ignore relations` - A list of two-item <charm>:<endpoint> string lists,
+    representing the two linked endpoints of a relation.  If a mismatch
+    matches one of these relations, it will be ignored.
+
+In the case of a mismatch matching both enforce and ignore rules, the enforce
+rule will "win" and it will be flagged as an error.
+
+Note that all the above checks use charm names rather than application names
+in their endpoint strings.
 
 == License ==
 

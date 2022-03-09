@@ -170,3 +170,7 @@ def main():
         cli.audit_all()
     else:
         cli.usage()
+
+
+if __name__ == "__main__":
+    main()
