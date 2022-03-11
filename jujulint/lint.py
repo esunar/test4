@@ -35,6 +35,7 @@ from dateutil import relativedelta
 
 import jujulint.util as utils
 from jujulint.logging import Logger
+from jujulint.check_spaces import find_space_mismatches, Relation
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
 
@@ -676,6 +677,53 @@ class Linter:
                         }
                     )
 
+    def check_spaces(self, parsed_yaml):
+        """Check that relations end with the same endpoint."""
+        space_checks = self.lint_rules.get("space checks", {})
+        enforce_endpoints = space_checks.get("enforce endpoints", [])
+        enforce_relations = [
+            Relation(*relation)
+            for relation in space_checks.get("enforce relations", [])]
+        ignore_endpoints = space_checks.get("ignore endpoints", [])
+        ignore_relations = [
+            Relation(*relation)
+            for relation in space_checks.get("ignore relations", [])]
+
+        mismatches = find_space_mismatches(parsed_yaml)
+        for mismatch in mismatches:
+            # By default: treat mismatches as warnings.
+            # If we have a matching enforcement rule, treat as an error.
+            # If we have a matching ignore rule, do not warn.
+            # (Enforcement rules win over ignore rules.)
+            error = False
+            warning = True
+            mismatch_relation = mismatch.get_charm_relation(self.model.app_to_charm)
+
+            for enforce_endpoint in enforce_endpoints:
+                if enforce_endpoint in mismatch_relation.endpoints:
+                    error = True
+            for ignore_endpoint in ignore_endpoints:
+                if ignore_endpoint in mismatch_relation.endpoints:
+                    warning = False
+            for enforce_relation in enforce_relations:
+                if enforce_relation == mismatch_relation:
+                    error = True
+            for ignore_relation in ignore_relations:
+                if ignore_relation == mismatch_relation:
+                    warning = False
+
+            message = "Space binding mismatch: {}".format(mismatch)
+            if error:
+                self.handle_error({
+                    "id": "space-binding-mismatch",
+                    "tags": ["mismatch", "space", "binding"],
+                    "description": "Unhandled space binding mismatch",
+                    "message": message,
+                })
+            elif warning:
+                # DEFAULT: not a critical error, so just warn
+                self._log_with_header(message, level=logging.WARN)
+
     def results(self):
         """Provide results of the linting process."""
         if self.model.missing_subs:
@@ -1027,6 +1075,21 @@ class Linter:
 
             self.check_subs(parsed_yaml["machines"])
             self.check_charms()
+
+            if "relations" in parsed_yaml:
+                # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
+                # in which case "juju export-bundle" omits them.
+                if "bindings" in list(parsed_yaml[applications].values())[0]:
+                    self.check_spaces(parsed_yaml)
+                else:
+                    self._log_with_header(
+                        "Relations detected but custom bindings not found; "
+                        "skipping space binding checks."
+                    )
+            else:
+                self._log_with_header(
+                    "Bundle relations data not found; skipping space binding checks."
+                )
 
             if "relations" not in parsed_yaml:
                 self.map_machines_to_az(parsed_yaml["machines"])

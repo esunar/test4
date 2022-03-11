@@ -10,3 +10,4 @@ pyflakes
 pytest
 pytest-cov
 pytest-html
+pytest-mock

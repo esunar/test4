@@ -28,3 +28,6 @@ stage/
 
 # runtime
 output/
+
+# venv
+/venv
