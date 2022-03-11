@@ -66,11 +66,17 @@ Supported top-level options for your rules file:
     mismatches.
  8. `!include <relative path>` - Extension to yaml to include files.
 
- === Space checks ===
+=== Space checks ===
 
 All relations defined within a bundle, except for cross-model relationships,
-will be checked for mismatches of their space bindings.  By default, mismatches
-are logged as warnings as this is not necessarily a critical error.
+will be checked for mismatches of their space bindings.
+
+By default, mismatches are logged as warnings as they are not necessarily
+critical problems.  If applications can route to each other despite the
+mismatch, there may be no real issue here, and it may be appropriate to ignore
+certain issues.  On the other hand, these mismatches may cause problems ranging
+from impaired throughput due to using suboptimal interfaces to breakages due to
+not being able to route between the related units.
 
 The following options are available to either log such mismatches as errors or
 to ignore them entirely:
