@@ -4,6 +4,8 @@ openstack database config: &openstack-config-database
    gte: 6G
   max-connections:
    gte: 2000
+  tuning-level:
+   eq: "fast"
 
 openstack mandatory deps database: &openstack-mandatory-deps-database
  - percona-cluster
