@@ -1080,7 +1080,13 @@ class Linter:
                 # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
                 # in which case "juju export-bundle" omits them.
                 if "bindings" in list(parsed_yaml[applications].values())[0]:
-                    self.check_spaces(parsed_yaml)
+                    try:
+                        self.check_spaces(parsed_yaml)
+                    except Exception as e:
+                        self._log_with_header(
+                            "Encountered error while checking spaces: {}".format(e),
+                            level=logging.WARN
+                        )
                 else:
                     self._log_with_header(
                         "Relations detected but custom bindings not found; "
