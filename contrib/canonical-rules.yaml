@@ -1,7 +1,7 @@
 ---
 # legacy rules file, there are also more specific configurations available
 kubernetes config:
- kubernetes-master:
+ kubernetes-control-plane:
   authorization-mode:
    eq: "RBAC,Node"
  canal:
@@ -97,7 +97,7 @@ subordinates:
 kubernetes mandatory: &kubernetes-mandatory-charms
  - containerd
  - kubeapi-load-balancer
- - kubernetes-master
+ - kubernetes-control-plane
  - kubernetes-worker
 
 kubernetes optional charms: &kubernetes-optional-charms

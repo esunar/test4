@@ -1,5 +1,5 @@
 kubernetes config:
- kubernetes-master:
+ kubernetes-control-plane:
   authorization-mode:
    eq: "RBAC,Node"
  canal:
@@ -9,7 +9,7 @@ kubernetes config:
 kubernetes mandatory: &kubernetes-mandatory-charms
  - containerd
  - kubeapi-load-balancer
- - kubernetes-master
+ - kubernetes-control-plane
  - kubernetes-worker
 
 kubernetes optional charms: &kubernetes-optional-charms
