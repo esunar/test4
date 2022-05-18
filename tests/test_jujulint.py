@@ -437,14 +437,14 @@ applications:
     def test_kubernetes_charm_missing(self, linter, juju_status):
         """Test that missing kubernetes mandatory charms are detected."""
         linter.cloud_type = "kubernetes"
-        linter.lint_rules["kubernetes mandatory"] = ["kubernetes-master"]
+        linter.lint_rules["kubernetes mandatory"] = ["kubernetes-control-plane"]
         linter.lint_rules["operations kubernetes mandatory"] = []
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
         assert len(errors) == 1
         assert errors[0]["id"] == "kubernetes-charm-missing"
-        assert errors[0]["charm"] == "kubernetes-master"
+        assert errors[0]["charm"] == "kubernetes-control-plane"
 
     def test_kubernetes_ops_charm_missing(self, linter, juju_status):
         """Test that missing kubernetes mandatory charms are detected."""
