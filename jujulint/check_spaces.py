@@ -33,6 +33,10 @@ class SpaceMismatch:
 
     def __init__(self, endpoint1, space1, endpoint2, space2):
         """Create the object."""
+        if endpoint2 < endpoint1:
+            # Let's keep things lexicographically ordered
+            endpoint1, endpoint2 = endpoint2, endpoint1
+            space1, space2 = space2, space1
         self.endpoint1 = endpoint1
         self.endpoint2 = endpoint2
         self.space1 = space1

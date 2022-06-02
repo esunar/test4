@@ -25,6 +25,7 @@ import logging
 import os.path
 import pprint
 import re
+import traceback
 
 import yaml
 
@@ -691,38 +692,45 @@ class Linter:
 
         mismatches = find_space_mismatches(parsed_yaml)
         for mismatch in mismatches:
-            # By default: treat mismatches as warnings.
-            # If we have a matching enforcement rule, treat as an error.
-            # If we have a matching ignore rule, do not warn.
-            # (Enforcement rules win over ignore rules.)
-            error = False
-            warning = True
-            mismatch_relation = mismatch.get_charm_relation(self.model.app_to_charm)
+            try:
+                self._handle_space_mismatch(mismatch, enforce_endpoints, enforce_relations, ignore_endpoints, ignore_relations)
+            except Exception:
+                # FOR NOW: super quick and dirty
+                print('Exception caught during space check; please check space by hand. {}'.format(traceback.format_exc()))
 
-            for enforce_endpoint in enforce_endpoints:
-                if enforce_endpoint in mismatch_relation.endpoints:
-                    error = True
-            for ignore_endpoint in ignore_endpoints:
-                if ignore_endpoint in mismatch_relation.endpoints:
-                    warning = False
-            for enforce_relation in enforce_relations:
-                if enforce_relation == mismatch_relation:
-                    error = True
-            for ignore_relation in ignore_relations:
-                if ignore_relation == mismatch_relation:
-                    warning = False
+    def _handle_space_mismatch(self, mismatch, enforce_endpoints, enforce_relations, ignore_endpoints, ignore_relations):
+        # By default: treat mismatches as warnings.
+        # If we have a matching enforcement rule, treat as an error.
+        # If we have a matching ignore rule, do not warn.
+        # (Enforcement rules win over ignore rules.)
+        error = False
+        warning = True
+        mismatch_relation = mismatch.get_charm_relation(self.model.app_to_charm)
 
-            message = "Space binding mismatch: {}".format(mismatch)
-            if error:
-                self.handle_error({
-                    "id": "space-binding-mismatch",
-                    "tags": ["mismatch", "space", "binding"],
-                    "description": "Unhandled space binding mismatch",
-                    "message": message,
-                })
-            elif warning:
-                # DEFAULT: not a critical error, so just warn
-                self._log_with_header(message, level=logging.WARN)
+        for enforce_endpoint in enforce_endpoints:
+            if enforce_endpoint in mismatch_relation.endpoints:
+                error = True
+        for ignore_endpoint in ignore_endpoints:
+            if ignore_endpoint in mismatch_relation.endpoints:
+                warning = False
+        for enforce_relation in enforce_relations:
+            if enforce_relation == mismatch_relation:
+                error = True
+        for ignore_relation in ignore_relations:
+            if ignore_relation == mismatch_relation:
+                warning = False
+
+        message = "Space binding mismatch: {}".format(mismatch)
+        if error:
+            self.handle_error({
+                "id": "space-binding-mismatch",
+                "tags": ["mismatch", "space", "binding"],
+                "description": "Unhandled space binding mismatch",
+                "message": message,
+            })
+        elif warning:
+            # DEFAULT: not a critical error, so just warn
+            self._log_with_header(message, level=logging.WARN)
 
     def results(self):
         """Provide results of the linting process."""
@@ -1080,7 +1088,13 @@ class Linter:
                 # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
                 # in which case "juju export-bundle" omits them.
                 if "bindings" in list(parsed_yaml[applications].values())[0]:
-                    self.check_spaces(parsed_yaml)
+                    #try:
+                        self.check_spaces(parsed_yaml)
+                    #except Exception as e:
+                    #    self._log_with_header(
+                    #        "Encountered error while checking spaces: {}".format(e),
+                    #        level=logging.WARN
+                    #    )
                 else:
                     self._log_with_header(
                         "Relations detected but custom bindings not found; "
