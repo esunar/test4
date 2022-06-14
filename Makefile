@@ -11,6 +11,9 @@ deb-src:
 test:
 	tox -e unit
 
+black:
+	tox -e black
+
 build:
 	snapcraft --use-lxd --debug
 
