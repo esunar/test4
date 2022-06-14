@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """Tests for jujulint."""
+import logging
 from datetime import datetime, timezone
 from unittest import mock
-import logging
 
 import pytest
 

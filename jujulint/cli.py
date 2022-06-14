@@ -17,15 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Main entrypoint for the juju-lint CLI."""
+import logging
+import os.path
+import sys
+
+import pkg_resources
+import yaml
+
 from jujulint.config import Config
 from jujulint.lint import Linter
 from jujulint.logging import Logger
 from jujulint.openstack import OpenStack
-import logging
-import os.path
-import pkg_resources
-import yaml
-import sys
 
 
 class Cli:

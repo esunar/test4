@@ -17,9 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Logging helper functions."""
-import colorlog
 import logging
 import sys
+
+import colorlog
 
 
 class Logger:

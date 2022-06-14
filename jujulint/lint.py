@@ -19,24 +19,23 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Lint operations and rule processing engine."""
 import collections
-from datetime import datetime, timezone
 import json
 import logging
 import os.path
 import pprint
 import re
 import traceback
+from datetime import datetime, timezone
 
-import yaml
-
-from attr import attrs, attrib
 import attr
 import dateutil.parser
+import yaml
+from attr import attrib, attrs
 from dateutil import relativedelta
 
 import jujulint.util as utils
+from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
-from jujulint.check_spaces import find_space_mismatches, Relation
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
 
