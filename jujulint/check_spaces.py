@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 """Checks for space mismatches between relation endpoints."""
+from logging import getLogger
+
+LOGGER = getLogger(__name__)
 
 
 class Relation:
@@ -111,8 +114,13 @@ def get_application_spaces(application_list, parsed_yaml):
     """Return a dictionary with app.binding=space mappings."""
     app_spaces = {}
     for app in application_list:
+        bindings = parsed_yaml["applications"][app].get('bindings', {})
+        if not bindings:
+            LOGGER.warning("Application %s is missing explicit bindings", app)
+            continue
+        if not bindings.get(""):
+            LOGGER.warning("Application %s does not define explicit default binding", app)
         app_spaces[app] = {}
-        bindings = parsed_yaml["applications"][app]['bindings']
         for name, value in bindings.items():
             app_spaces[app][name] = value
     return app_spaces
