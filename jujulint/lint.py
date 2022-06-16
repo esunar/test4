@@ -1087,7 +1087,10 @@ class Linter:
             if "relations" in parsed_yaml:
                 # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
                 # in which case "juju export-bundle" omits them.
-                if "bindings" in list(parsed_yaml[applications].values())[0]:
+                bindings = any(
+                    "bindings" in app for app in parsed_yaml[applications].values()
+                )
+                if bindings:
                     #try:
                         self.check_spaces(parsed_yaml)
                     #except Exception as e:
