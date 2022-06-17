@@ -8,10 +8,11 @@
 
 """Test fixtures for juju-lint tool."""
 
-import mock
 import os
-import pytest
 import sys
+
+import mock
+import pytest
 
 # bring in top level library to path
 test_path = os.path.dirname(os.path.abspath(__file__))

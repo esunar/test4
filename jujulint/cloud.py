@@ -33,13 +33,15 @@ Todo:
     * Add function to run command on a unit, via fabric and jump host if configured
 
 """
-from fabric2 import Connection, Config
-from paramiko.ssh_exception import SSHException
-from jujulint.logging import Logger
-from jujulint.lint import Linter
-from subprocess import check_output
 import socket
+from subprocess import check_output
+
 import yaml
+from fabric2 import Config, Connection
+from paramiko.ssh_exception import SSHException
+
+from jujulint.lint import Linter
+from jujulint.logging import Logger
 
 
 class Cloud:

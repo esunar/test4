@@ -1,6 +1,6 @@
 ---
 name: juju-lint
-base: core18
+base: core20
 summary: Linter for Juju models to compare deployments with configurable policy
 adopt-info: juju-lint
 description: |
@@ -13,8 +13,8 @@ apps:
   juju-lint:
     command: bin/juju-lint
     environment:
-      PATH: "/snap/juju-lint/current/bin:/snap/juju-lint/current/usr/bin:/bin:/usr/bin:"
-      PYTHONPATH: $SNAP/usr/lib/python3.6/site-packages:$SNAP/usr/lib/python3.6/dist-packages:$PYTHONPATH
+      PATH: "/snap/juju-lint/current/bin:/snap/juju-lint/current/usr/bin:/bin:/usr/bin:/snap/bin"
+      PYTHONPATH: $SNAP/usr/lib/python3.8/site-packages:$SNAP/usr/lib/python3.8/dist-packages:$PYTHONPATH
 parts:
   juju-lint:
     plugin: python
