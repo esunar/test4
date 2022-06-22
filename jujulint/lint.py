@@ -19,24 +19,23 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Lint operations and rule processing engine."""
 import collections
-from datetime import datetime, timezone
 import json
 import logging
 import os.path
 import pprint
 import re
 import traceback
+from datetime import datetime, timezone
 
-import yaml
-
-from attr import attrs, attrib
 import attr
 import dateutil.parser
+import yaml
+from attr import attrib, attrs
 from dateutil import relativedelta
 
 import jujulint.util as utils
+from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
-from jujulint.check_spaces import find_space_mismatches, Relation
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
 
@@ -195,7 +194,7 @@ class Linter:
         if val[-1].lower() == val[-1]:
             quotient = 1000
 
-        conv = {"g": quotient ** 3, "m": quotient ** 2, "k": quotient}
+        conv = {"g": quotient**3, "m": quotient**2, "k": quotient}
 
         return _int * conv[val[-1].lower()]
 
@@ -684,21 +683,39 @@ class Linter:
         enforce_endpoints = space_checks.get("enforce endpoints", [])
         enforce_relations = [
             Relation(*relation)
-            for relation in space_checks.get("enforce relations", [])]
+            for relation in space_checks.get("enforce relations", [])
+        ]
         ignore_endpoints = space_checks.get("ignore endpoints", [])
         ignore_relations = [
-            Relation(*relation)
-            for relation in space_checks.get("ignore relations", [])]
+            Relation(*relation) for relation in space_checks.get("ignore relations", [])
+        ]
 
         mismatches = find_space_mismatches(parsed_yaml)
         for mismatch in mismatches:
             try:
-                self._handle_space_mismatch(mismatch, enforce_endpoints, enforce_relations, ignore_endpoints, ignore_relations)
+                self._handle_space_mismatch(
+                    mismatch,
+                    enforce_endpoints,
+                    enforce_relations,
+                    ignore_endpoints,
+                    ignore_relations,
+                )
             except Exception:
                 # FOR NOW: super quick and dirty
-                print('Exception caught during space check; please check space by hand. {}'.format(traceback.format_exc()))
+                print(
+                    "Exception caught during space check; please check space by hand. {}".format(
+                        traceback.format_exc()
+                    )
+                )
 
-    def _handle_space_mismatch(self, mismatch, enforce_endpoints, enforce_relations, ignore_endpoints, ignore_relations):
+    def _handle_space_mismatch(
+        self,
+        mismatch,
+        enforce_endpoints,
+        enforce_relations,
+        ignore_endpoints,
+        ignore_relations,
+    ):
         # By default: treat mismatches as warnings.
         # If we have a matching enforcement rule, treat as an error.
         # If we have a matching ignore rule, do not warn.
@@ -722,12 +739,14 @@ class Linter:
 
         message = "Space binding mismatch: {}".format(mismatch)
         if error:
-            self.handle_error({
-                "id": "space-binding-mismatch",
-                "tags": ["mismatch", "space", "binding"],
-                "description": "Unhandled space binding mismatch",
-                "message": message,
-            })
+            self.handle_error(
+                {
+                    "id": "space-binding-mismatch",
+                    "tags": ["mismatch", "space", "binding"],
+                    "description": "Unhandled space binding mismatch",
+                    "message": message,
+                }
+            )
         elif warning:
             # DEFAULT: not a critical error, so just warn
             self._log_with_header(message, level=logging.WARN)
@@ -1041,7 +1060,7 @@ class Linter:
                     offer_overlay = True
             if parsed_yaml is None or not offer_overlay:
                 parsed_yaml = doc
-        return(parsed_yaml)
+        return parsed_yaml
 
     def lint_yaml_string(self, yaml_string):
         """Lint provided YAML string."""
@@ -1086,18 +1105,18 @@ class Linter:
 
             if "relations" in parsed_yaml:
                 # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
-                # in which case "juju export-bundle" omits them.
+                # in which case "juju export-bundle" omits them. See LP#1949883.
                 bindings = any(
                     "bindings" in app for app in parsed_yaml[applications].values()
                 )
                 if bindings:
-                    #try:
-                        self.check_spaces(parsed_yaml)
-                    #except Exception as e:
-                    #    self._log_with_header(
-                    #        "Encountered error while checking spaces: {}".format(e),
-                    #        level=logging.WARN
-                    #    )
+                    # try:
+                    self.check_spaces(parsed_yaml)
+                    # except Exception as e:
+                    #     self._log_with_header(
+                    #         "Encountered error while checking spaces: {}".format(e),
+                    #         level=logging.WARN
+                    #     )
                 else:
                     self._log_with_header(
                         "Relations detected but explicit bindings not found; "

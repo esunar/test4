@@ -18,8 +18,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Config handling routines."""
 
-from confuse import Configuration
 from argparse import ArgumentParser
+
+from confuse import Configuration
 
 
 class Config(Configuration):

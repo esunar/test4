@@ -1,5 +1,5 @@
 lint:
-	tox -e py3-lint
+	tox -e lintverbose
 
 dch:
 	if ! which gbp > /dev/null; then sudo apt-get install -y git-buildpackage; fi
@@ -10,6 +10,9 @@ deb-src:
 
 test:
 	tox -e unit
+
+format-code:
+	tox -e format-code
 
 build:
 	snapcraft --use-lxd --debug

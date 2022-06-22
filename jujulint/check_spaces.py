@@ -23,7 +23,9 @@ class Relation:
         While Juju does define separate provider and requirer roles, we'll ignore
         those here.
         """
-        return set([self.endpoint1, self.endpoint2]) == set([other.endpoint1, other.endpoint2])
+        return set([self.endpoint1, self.endpoint2]) == set(
+            [other.endpoint1, other.endpoint2]
+        )
 
     @property
     def endpoints(self):
@@ -48,7 +50,8 @@ class SpaceMismatch:
     def __str__(self):
         """Stringify the object."""
         return "SpaceMismatch({} (space {}) != {} (space {}))".format(
-            self.endpoint1, self.space1, self.endpoint2, self.space2)
+            self.endpoint1, self.space1, self.endpoint2, self.space2
+        )
 
     @property
     def relation(self):
@@ -57,8 +60,8 @@ class SpaceMismatch:
 
     def get_charm_relation(self, app_to_charm_map):
         """Return a relation object, mapping applications to charms."""
-        app1, endpoint1 = self.endpoint1.split(':')
-        app2, endpoint2 = self.endpoint2.split(':')
+        app1, endpoint1 = self.endpoint1.split(":")
+        app2, endpoint2 = self.endpoint2.split(":")
         charm1 = app_to_charm_map[app1]
         charm2 = app_to_charm_map[app2]
         return Relation(":".join([charm1, endpoint1]), ":".join([charm2, endpoint2]))
@@ -95,7 +98,9 @@ def find_space_mismatches(parsed_yaml, debug=False):
         space1 = get_relation_space(relation.endpoint1, app_spaces)
         space2 = get_relation_space(relation.endpoint2, app_spaces)
         if space1 != space2:
-            mismatch = SpaceMismatch(relation.endpoint1, space1, relation.endpoint2, space2)
+            mismatch = SpaceMismatch(
+                relation.endpoint1, space1, relation.endpoint2, space2
+            )
             mismatches.append(mismatch)
 
     if debug:
@@ -137,7 +142,7 @@ def get_application_relations(parsed_yaml):
 
 def get_relation_space(endpoint, app_spaces):
     """Get space for specified app and service."""
-    app, service = endpoint.split(':')
+    app, service = endpoint.split(":")
     if app in app_spaces:
         if service not in app_spaces[app]:
             return app_spaces[app][""]

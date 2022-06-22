@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """Tests for jujulint."""
+import logging
 from datetime import datetime, timezone
 from unittest import mock
-import logging
 
 import pytest
 
@@ -108,7 +108,7 @@ class TestLinter:
             "test-app-4": {"charm": "local:SERIES/TEST-CHARM12"},
             "test-app-5": {"charm": "local:TEST-CHARM12"},
             "test-app-6": {"charm": "cs:~TEST-CHARMERS/TEST-CHARM12-123"},
-            "test-app-7": {"charm": "ch:amd64/bionic/TEST-CHARM12-123"}
+            "test-app-7": {"charm": "ch:amd64/bionic/TEST-CHARM12-123"},
         }
         linter.map_charms(applications)
         for charm in linter.model.charms:
@@ -526,9 +526,7 @@ applications:
 
     def test_config_eq_no_suffix_check_all(self, linter, juju_status):
         """Test the config condition 'eq'. when no suffix all should be checked."""
-        linter.lint_rules["config"] = {
-            "ubuntu": {"fake-opt": {"eq": False}}
-        }
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"eq": False}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
         juju_status["applications"]["ubuntu-host"] = juju_status["applications"].pop(
             "ubuntu"
@@ -722,29 +720,22 @@ applications:
     }
 
     def test_check_spaces_detect_mismatches(self, linter, mocker):
-        mock_log: mock.MagicMock = mocker.patch('jujulint.lint.Linter._log_with_header')
+        mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check.
         # Based on the above bundle, we should have exactly one mismatch.
         linter.check_spaces(self.check_spaces_example_bundle)
 
-        # due to possible different ordering of the bundle dict in different python
-        # versions, the warning output can have two different forms
-        expected_warnings = {
-            ('Space binding mismatch: SpaceMismatch(telegraf-app:prometheus-client '
-             '(space external-space) != prometheus-app:target (space internal-space))'),
-            ('Space binding mismatch: SpaceMismatch(prometheus-app:target (space '
-             'internal-space) != telegraf-app:prometheus-client (space external-space))'
-             ),
-        }
-
         # By default the mismatch should only trigger a warning, not an error.
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
         assert mock_log.call_count == 1
-        assert mock_log.mock_calls[0].kwargs['level'] == logging.WARN
-        assert mock_log.mock_calls[0].args[0] in expected_warnings
+        assert mock_log.mock_calls[0].kwargs["level"] == logging.WARN
+        assert mock_log.mock_calls[0].args[0] == (
+            "Space binding mismatch: SpaceMismatch(prometheus-app:target "
+            "(space internal-space) != telegraf-app:prometheus-client (space external-space))"
+        )
 
     def test_check_spaces_enforce_endpoints(self, linter):
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
@@ -758,7 +749,9 @@ applications:
 
         # Enforce the opposite end of the relation.
         # This should also generate an error.
-        linter.lint_rules["space checks"] = {"enforce endpoints": ["telegraf:prometheus-client"]}
+        linter.lint_rules["space checks"] = {
+            "enforce endpoints": ["telegraf:prometheus-client"]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 2
@@ -768,20 +761,24 @@ applications:
 
         # Run the space check with prometheus:target endpoint enforced.
         # This should generate an error.
-        linter.lint_rules["space checks"] = {"enforce relations": [["prometheus:target", "telegraf:prometheus-client"]]}
+        linter.lint_rules["space checks"] = {
+            "enforce relations": [["prometheus:target", "telegraf:prometheus-client"]]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 1
 
         # Reverse the relation's definition order.
         # This should work the same way and also generate an error.
-        linter.lint_rules["space checks"] = {"enforce relations": [["telegraf:prometheus-client", "prometheus:target"]]}
+        linter.lint_rules["space checks"] = {
+            "enforce relations": [["telegraf:prometheus-client", "prometheus:target"]]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 2
 
     def test_check_spaces_ignore_endpoints(self, linter, mocker):
-        mock_log: mock.MagicMock = mocker.patch('jujulint.lint.Linter._log_with_header')
+        mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint ignored.
@@ -794,19 +791,23 @@ applications:
 
         # Enforce the opposite end of the relation.
         # This should also generate an error.
-        linter.lint_rules["space checks"] = {"ignore endpoints": ["telegraf:prometheus-client"]}
+        linter.lint_rules["space checks"] = {
+            "ignore endpoints": ["telegraf:prometheus-client"]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
         assert mock_log.call_count == 0
 
     def test_check_spaces_ignore_relations(self, linter, mocker):
-        mock_log: mock.MagicMock = mocker.patch('jujulint.lint.Linter._log_with_header')
+        mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint ignored.
         # This should neither generate an error nor a warning.
-        linter.lint_rules["space checks"] = {"ignore relations": [["prometheus:target", "telegraf:prometheus-client"]]}
+        linter.lint_rules["space checks"] = {
+            "ignore relations": [["prometheus:target", "telegraf:prometheus-client"]]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
@@ -814,7 +815,9 @@ applications:
 
         # Reverse the relation's definition order.
         # This should work the same way and also not generate errors/warnings.
-        linter.lint_rules["space checks"] = {"ignore relations": [["telegraf:prometheus-client", "prometheus:target"]]}
+        linter.lint_rules["space checks"] = {
+            "ignore relations": [["telegraf:prometheus-client", "prometheus:target"]]
+        }
         linter.check_spaces(self.check_spaces_example_bundle)
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
@@ -850,10 +853,10 @@ applications:
 
         logger_mock.warning.assert_called_once_with(expected_warning,
                                                     app_without_binding)
-        
+
     def test_check_spaces_missing_default_endpoint_binding(self, linter, mocker):
         """Raise warning if application is missing explicit default binding.
-        
+
         Aside from specifying binding for each endpoint explicitly, bundle can also
         specify default space (represented by empty string ""). Any endpoint that's not
         mentioned explicitly will be bound to this default space.
@@ -861,7 +864,7 @@ applications:
         """
         logger_mock = mocker.patch.object(check_spaces, "LOGGER")
         app_without_default_space = "telegraf-app"
-        
+
         bundle = {
             "applications": {
                 "prometheus-app": {
@@ -880,7 +883,7 @@ applications:
                 ["telegraf-app:prometheus-client", "prometheus-app:target"],
             ],
         }
-        
+
         expected_warning = "Application %s does not define explicit default binding"
 
         linter.check_spaces(bundle)
