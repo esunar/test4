@@ -22,6 +22,20 @@ parts:
       - requirements.txt
     source: .
     source-type: git
+    # Classic core20 snaps require staged python.
+    python-packages: [pip, setuptools, wheel]
+    stage-packages:
+      - libpython3-stdlib
+      - libpython3.8-minimal
+      - libpython3.8-stdlib
+      - python3.8-minimal
+      - python3-distutils
+      - python3-minimal
+      - python3-pkg-resources
+      - python3-pip
+      - python3-setuptools
+      - python3-venv
+      - python3-wheel
     override-build: |
         snapcraftctl build
         echo "Version: $(python3 setup.py --version)"
