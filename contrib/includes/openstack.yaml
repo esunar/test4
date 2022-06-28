@@ -21,6 +21,8 @@ openstack config base: &openstack-config-base
  rabbitmq-server:
   cluster-partition-handling:
    eq: "pause_minority"
+  queue_thresholds:
+   search: "\\W\\*, \\W\\*, 25000, 27500"
  keystone:
   token-expiration:
    gte: 86400

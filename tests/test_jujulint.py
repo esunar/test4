@@ -601,6 +601,37 @@ applications:
         assert errors[0]["application"] == "ubuntu"
         assert errors[0]["rule"] == "fake-opt"
 
+    def test_config_search_valid(self, linter, juju_status):
+        """Test the config condition 'search' when valid."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake_opt": {"search": "\\W\\*, \\W\\*, 25000, 27500"}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {
+            "fake_opt": "[[/, queue1, 10, 20], [\\*, \\*, 25000, 27500]]"
+        }
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 0
+
+    def test_config_search_invalid(self, linter, juju_status):
+        """Test the config condition 'search' when invalid."""
+        linter.lint_rules["config"] = {
+            "ubuntu": {"fake_opt": {"search": "\\W\\*, \\W\\*, 25000, 27500"}}
+        }
+        juju_status["applications"]["ubuntu"]["options"] = {
+            "fake_opt": "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+        }
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 1
+        assert errors[0]["id"] == "config-search-check"
+        assert errors[0]["application"] == "ubuntu"
+        assert errors[0]["rule"] == "fake_opt"
+        assert errors[0]["expected_value"] == "\\W\\*, \\W\\*, 25000, 27500"
+        assert errors[0]["actual_value"] == "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+
     def test_parse_cmr_apps_export_bundle(self, linter):
         """Test the charm CMR parsing for bundles."""
         parsed_yaml = {

@@ -37,7 +37,7 @@ import jujulint.util as utils
 from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
 
-VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
+VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte", "search")
 
 # Generic named tuple to represent the binary config operators (eq,neq,gte)
 ConfigOperator = collections.namedtuple(
@@ -287,6 +287,20 @@ class Linter:
             error_template="Application {} has config for '{}' which is less than {}: {}",
         )
 
+        return self.check_config_generic(
+            operator, app_name, check_value, config_key, app_config
+        )
+
+    def search(self, app_name, check_value, config_key, app_config):
+        """Scan through the charm config looking for a match using the regex pattern."""
+        operator = ConfigOperator(
+            name="search",
+            repr="regex",
+            check=lambda check_value, actual_value: re.search(
+                str(check_value), str(actual_value)
+            ),
+            error_template="Application {} has config for '{}' with regex pattern of {} that doesn't match {}",
+        )
         return self.check_config_generic(
             operator, app_name, check_value, config_key, app_config
         )
