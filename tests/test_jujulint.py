@@ -6,6 +6,8 @@ from unittest import mock
 
 import pytest
 
+from jujulint import check_spaces
+
 
 class TestUtils:
     """Test the jujulint utilities."""
@@ -820,3 +822,71 @@ applications:
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
         assert mock_log.call_count == 0
+
+    def test_check_spaces_missing_explicit_bindings(self, linter, mocker):
+        """Test that check_spaces shows warning if some application are missing bindings
+
+        This warning should be triggerred if some applications have bindings and some
+        dont.
+        """
+        logger_mock = mocker.patch.object(check_spaces, "LOGGER")
+
+        app_without_binding = "prometheus-app"
+        bundle = {
+            "applications": {
+                app_without_binding: {},
+                "telegraf-app": {
+                    "bindings": {
+                        "": "alpha",
+                        "prometheus-client": "alpha",
+                    },
+                },
+            },
+            "relations": [
+                ["telegraf-app:prometheus-client", "prometheus-app:target"],
+            ],
+        }
+
+        expected_warning = "Application %s is missing explicit bindings"
+
+        linter.check_spaces(bundle)
+
+        logger_mock.warning.assert_called_once_with(expected_warning,
+                                                    app_without_binding)
+
+    def test_check_spaces_missing_default_endpoint_binding(self, linter, mocker):
+        """Raise warning if application is missing explicit default binding.
+
+        Aside from specifying binding for each endpoint explicitly, bundle can also
+        specify default space (represented by empty string ""). Any endpoint that's not
+        mentioned explicitly will be bound to this default space.
+        Juju lint should raise warning if bundles do not define default space.
+        """
+        logger_mock = mocker.patch.object(check_spaces, "LOGGER")
+        app_without_default_space = "telegraf-app"
+
+        bundle = {
+            "applications": {
+                "prometheus-app": {
+                    "bindings": {
+                        "": "alpha",
+                        "target": "alpha",
+                    },
+                },
+                app_without_default_space: {
+                    "bindings": {
+                        "prometheus-client": "alpha",
+                    },
+                },
+            },
+            "relations": [
+                ["telegraf-app:prometheus-client", "prometheus-app:target"],
+            ],
+        }
+
+        expected_warning = "Application %s does not define explicit default binding"
+
+        linter.check_spaces(bundle)
+
+        logger_mock.warning.assert_called_once_with(expected_warning,
+                                                    app_without_default_space)

@@ -1106,13 +1106,22 @@ class Linter:
             if "relations" in parsed_yaml:
                 # "bindings" *should* be in exported bundles, *unless* no custom bindings exist,
                 # in which case "juju export-bundle" omits them. See LP#1949883.
-                if "bindings" in list(parsed_yaml[applications].values())[0]:
+                bindings = any(
+                    "bindings" in app for app in parsed_yaml[applications].values()
+                )
+                if bindings:
+                    # try:
                     self.check_spaces(parsed_yaml)
-
+                    # except Exception as e:
+                    #     self._log_with_header(
+                    #         "Encountered error while checking spaces: {}".format(e),
+                    #         level=logging.WARN
+                    #     )
                 else:
                     self._log_with_header(
-                        "Relations detected but custom bindings not found; "
-                        "skipping space binding checks."
+                        "Relations detected but explicit bindings not found; "
+                        "Not specifying explicit bindings may cause problems on models"
+                        " with multiple network spaces.", level=logging.WARNING
                     )
             else:
                 self._log_with_header(
