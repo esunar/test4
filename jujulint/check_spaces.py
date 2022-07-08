@@ -62,8 +62,8 @@ class SpaceMismatch:
         """Return a relation object, mapping applications to charms."""
         app1, endpoint1 = self.endpoint1.split(":")
         app2, endpoint2 = self.endpoint2.split(":")
-        charm1 = app_to_charm_map[app1]
-        charm2 = app_to_charm_map[app2]
+        charm1 = app_to_charm_map.get(app1, "")
+        charm2 = app_to_charm_map.get(app2, "")
         return Relation(":".join([charm1, endpoint1]), ":".join([charm2, endpoint2]))
 
 
@@ -97,7 +97,7 @@ def find_space_mismatches(parsed_yaml, debug=False):
     for relation in relations_list:
         space1 = get_relation_space(relation.endpoint1, app_spaces)
         space2 = get_relation_space(relation.endpoint2, app_spaces)
-        if space1 != space2:
+        if space1 != space2 and all([space1 != "XModel", space2 != "XModel"]):
             mismatch = SpaceMismatch(
                 relation.endpoint1, space1, relation.endpoint2, space2
             )
@@ -119,13 +119,18 @@ def get_application_spaces(application_list, parsed_yaml):
     """Return a dictionary with app.binding=space mappings."""
     app_spaces = {}
     for app in application_list:
-        bindings = parsed_yaml["applications"][app].get('bindings', {})
+        bindings = parsed_yaml["applications"][app].get("bindings", {})
+        app_spaces.setdefault(app, {})
         if not bindings:
+            # this probably means that is a single space binding. See LP#1949883
             LOGGER.warning("Application %s is missing explicit bindings", app)
+            LOGGER.warning("Setting default binding of '%s' to alpha", app)
+            app_spaces[app][""] = "alpha"
             continue
         if not bindings.get(""):
-            LOGGER.warning("Application %s does not define explicit default binding", app)
-        app_spaces[app] = {}
+            LOGGER.warning(
+                "Application %s does not define explicit default binding", app
+            )
         for name, value in bindings.items():
             app_spaces[app][name] = value
     return app_spaces
@@ -149,4 +154,8 @@ def get_relation_space(endpoint, app_spaces):
         else:
             return app_spaces[app][service]
     else:
+        LOGGER.warning(
+            "Multi-model is not supported yet. Please check if '%s' is from another model",
+            app,
+        )
         return "XModel"
