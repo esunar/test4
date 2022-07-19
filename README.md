@@ -1,6 +1,6 @@
-= Juju Lint =
+# Juju Lint
 
-== Introduction ==
+## Introduction
 
 This is intended to be run against a yaml or json dump of Juju status, a YAML
 dump of a juju bundle, or a remote cloud or clouds via SSH.
@@ -39,18 +39,18 @@ To use a different rules file:
 
 For all other options, consult `juju-lint --help`
 
-== Example ==
+### Example
 
 A typical use case is linting an openstack cloud:
 
     juju status -m openstack --format=json > juju-status.json
     juju export-bundle --include-charm-defaults -m openstack > bundle.yaml
-    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+    juju-lint -c /snap/juju-lint/current/contrib/fcb-ussuri-focal.yaml \
         -t openstack juju-status.json
-    juju-lint -c /snap/juju-lint/current/contrib/openstack-focal-ovn.yaml \
+    juju-lint -c /snap/juju-lint/current/contrib/fcb-ussuri-focal.yaml \
         -t openstack bundle.yaml
 
-== Rules File ==
+## Rules File
 
 For an example of a rules file, see `example-lint-rules.yaml`.
 
@@ -66,7 +66,23 @@ Supported top-level options for your rules file:
     mismatches.
  8. `!include <relative path>` - Extension to yaml to include files.
 
-=== Space checks ===
+### Openstack
+
+The snap comes with some standard rules that tries to match the bundles generated on
+[fce-templates](https://launchpad.net/fce-templates/). It's assumed that `ovn` is used
+by default. You can find the rules at `/snap/juju-lint/current/contrib/` and they have
+the following pattern:
+
+```
+fcb-<openstack_release>-<ubuntu-series-feature>.yaml
+```
+
+E.g: fcb-ussuri-focal.yaml, fcb-ussuri-focal-ovs.yaml
+
+#### Note
+The rules starting with `openstack`, e.g: `openstack-bionic-ovn.yaml`, will be deprecated.
+
+## Space checks
 
 All relations defined within a bundle, except for cross-model relationships,
 will be checked for mismatches of their space bindings.
@@ -86,9 +102,9 @@ to ignore them entirely:
  2. `enforce relations` - A list of two-item <charm>:<endpoint> string lists,
     representing the two linked endpoints of a relation.  If a mismatch
     matches one of these relations, it will be flagged as an error.
- 1. `ignore endpoints` - A list of <charm>:<endpoint> strings.  If a mismatch
+ 3. `ignore endpoints` - A list of <charm>:<endpoint> strings.  If a mismatch
     matches one of these endpoints, it will be ignored.
- 1. `ignore relations` - A list of two-item <charm>:<endpoint> string lists,
+ 4. `ignore relations` - A list of two-item <charm>:<endpoint> string lists,
     representing the two linked endpoints of a relation.  If a mismatch
     matches one of these relations, it will be ignored.
 
@@ -98,7 +114,7 @@ rule will "win" and it will be flagged as an error.
 Note that all the above checks use charm names rather than application names
 in their endpoint strings.
 
-== License ==
+## License
 
 Copyright 2020 Canonical Limited.
 License granted by Canonical Limited.

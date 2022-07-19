@@ -1,0 +1,5 @@
+# Do not add prometheus ceph exporter if openstack version is greater/equal than ussuri
+# Instead, use ceph-dashboard
+
+operations openstack mandatory release: &operations-openstack-mandatory-release
+  - ceph-dashboard

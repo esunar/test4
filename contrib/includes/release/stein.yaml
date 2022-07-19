@@ -1,0 +1,4 @@
+# add prometheus ceph exporter if openstack version is lesser than ussuri
+
+operations openstack mandatory release: &operations-openstack-mandatory-release
+  - prometheus-ceph-exporter

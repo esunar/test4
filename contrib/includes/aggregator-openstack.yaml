@@ -1,20 +1,22 @@
 operations charms: &operations-charms
- - *operations-mandatory-charms
- - *operations-mandatory-deps
- - *operations-mandatory-subs
- - *operations-optional-charms
- - *operations-optional-subs
- - *operations-openstack-mandatory-charms
+  - *operations-mandatory-charms
+  - *operations-mandatory-deps
+  - *operations-mandatory-subs
+  - *operations-optional-charms
+  - *operations-optional-subs
+  - *operations-openstack-mandatory-charms
+  - *operations-openstack-mandatory-release
 
 openstack charms: &openstack-charms
- - *openstack-mandatory-charms
- - *openstack-mandatory-deps
- - *openstack-mandatory-subs
- - *openstack-optional-charms
- - *cisco-aci-charms
- - *trilio-charms
+  - *openstack-mandatory-charms
+  - *openstack-mandatory-deps
+  - *openstack-mandatory-subs
+  - *openstack-optional-charms
+  - *openstack-loadbalancer
+  - *cisco-aci-charms
+  - *trilio-charms
 
 known charms:
- - ubuntu
- - *openstack-charms
- - *operations-charms
+  - ubuntu
+  - *openstack-charms
+  - *operations-charms
