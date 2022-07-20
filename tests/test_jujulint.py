@@ -824,7 +824,7 @@ applications:
         assert mock_log.call_count == 0
 
     def test_check_spaces_missing_explicit_bindings(self, linter, mocker):
-        """Test that check_spaces shows warning if some application are missing bindings
+        """Test that check_spaces shows warning if some application are missing bindings.
 
         This warning should be triggerred if some applications have bindings and some
         dont.
@@ -847,12 +847,13 @@ applications:
             ],
         }
 
-        expected_warning = "Application %s is missing explicit bindings"
+        expected_warning_callings = [
+            mock.call("Application %s is missing explicit bindings", "prometheus-app"),
+            mock.call("Setting default binding of '%s' to alpha", "prometheus-app"),
+        ]
 
         linter.check_spaces(bundle)
-
-        logger_mock.warning.assert_called_once_with(expected_warning,
-                                                    app_without_binding)
+        assert logger_mock.warning.call_args_list == expected_warning_callings
 
     def test_check_spaces_missing_default_endpoint_binding(self, linter, mocker):
         """Raise warning if application is missing explicit default binding.
@@ -888,5 +889,35 @@ applications:
 
         linter.check_spaces(bundle)
 
-        logger_mock.warning.assert_called_once_with(expected_warning,
-                                                    app_without_default_space)
+        logger_mock.warning.assert_called_once_with(
+            expected_warning, app_without_default_space
+        )
+
+    def test_check_spaces_multi_model_warning(self, linter, mocker):
+        """Test that check_spaces shows warning if some application are from another model."""
+        logger_mock = mocker.patch.object(check_spaces, "LOGGER")
+
+        app_another_model = "prometheus-app"
+        bundle = {
+            "applications": {
+                "telegraf-app": {
+                    "bindings": {
+                        "": "alpha",
+                        "prometheus-client": "alpha",
+                    },
+                },
+            },
+            "relations": [
+                ["telegraf-app:prometheus-client", "prometheus-app:target"],
+            ],
+        }
+
+        expected_warning_callings = [
+            mock.call(
+                "Multi-model is not supported yet. Please check if '%s' is from another model",
+                app_another_model,
+            ),
+        ]
+
+        linter.check_spaces(bundle)
+        assert logger_mock.warning.call_args_list == expected_warning_callings

@@ -1121,7 +1121,8 @@ class Linter:
                     self._log_with_header(
                         "Relations detected but explicit bindings not found; "
                         "Not specifying explicit bindings may cause problems on models"
-                        " with multiple network spaces.", level=logging.WARNING
+                        " with multiple network spaces.",
+                        level=logging.WARNING,
                     )
             else:
                 self._log_with_header(
