@@ -64,17 +64,45 @@ class Cli:
             self.logger.error("Cloud not locate rules file {}".format(rules_file))
             sys.exit(1)
 
+    @property
+    def cloud_type(self):
+        """Get the cloud type passed in the CLI.
+
+        :return: cloud-type of the deployment or None.
+        :rtype: str
+        """
+        cloud_type = None
+        if "cloud-type" in self.config:
+            cloud_type = self.config["cloud-type"].get()
+        return cloud_type
+
+    @property
+    def manual_file(self):
+        """Get the manual file passed in the CLI.
+
+        :return: path to manual file to lint or None.
+        :rtype: str
+        """
+        manual_file = None
+        if "manual-file" in self.config:
+            manual_file = self.config["manual-file"].get()
+        return manual_file
+
     def startup_message(self):
         """Print startup message to log."""
         self.logger.info(
             (
                 "juju-lint version {} starting...\n"
                 "\t* Config directory: {}\n"
+                "\t* Cloud type: {}\n"
+                "\t* Manual file: {}\n"
                 "\t* Rules file: {}\n"
                 "\t* Log level: {}\n"
             ).format(
                 self.version,
                 self.config.config_dir(),
+                self.cloud_type or "Unknown",
+                self.manual_file or False,
                 self.lint_rules,
                 self.config["logging"]["loglevel"].get(),
             )
@@ -161,13 +189,8 @@ def main():
     """Program entry point."""
     cli = Cli()
     cli.startup_message()
-    if "manual-file" in cli.config:
-        manual_file = cli.config["manual-file"].get()
-        if "manual-type" in cli.config:
-            manual_type = cli.config["manual-type"].get()
-            cli.audit_file(manual_file, cloud_type=manual_type)
-        else:
-            cli.audit_file(manual_file)
+    if cli.manual_file:
+        cli.audit_file(cli.manual_file, cloud_type=cli.cloud_type)
     elif "clouds" in cli.config:
         cli.audit_all()
     else:

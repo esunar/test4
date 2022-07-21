@@ -119,6 +119,31 @@ class TestLinter:
         with pytest.raises(utils.InvalidCharmNameError):
             linter.map_charms(applications)
 
+    def test_check_cloud_type(self, linter, mocker):
+        """Test cloud_type detection."""
+        mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
+        model_charms = {
+            "openstack": {"keystone", "nova-compute"},
+            "kubernetes": {"kubernetes-worker", "kubernetes-control-plane"},
+        }
+        # detect cloud_type depending on the deployment charms and
+        # if it's not passe as an argument in the cli.
+        for cloud_type, charms in model_charms.items():
+            linter.cloud_type = None
+            linter.check_cloud_type(charms)
+            assert linter.cloud_type == cloud_type
+
+        # in case cloud_type is passed doesn't change the value
+        linter.cloud_type = "openstack"
+        for cloud_type, charms in model_charms.items():
+            linter.check_cloud_type(charms)
+            assert linter.cloud_type == "openstack"
+
+        # if it's an invalid cloud_type log warn to user
+        linter.cloud_type = "foo-bar"
+        linter.check_cloud_type({"foo", "bar"})
+        mock_log.assert_called_with("Cloud type foo-bar is unknown", level=logging.WARN)
+
     def test_juju_status_unexpected(self, linter, juju_status):
         """Test that juju and workload status is expected."""
         # inject invalid status to the application

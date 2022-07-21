@@ -677,6 +677,51 @@ class Linter:
                         }
                     )
 
+    def check_cloud_type(self, deployment_charms):
+        """Check cloud_type or detect depending on the deployed charms.
+
+        :param deployment_charms: charms present in the bundle and/or status.
+        :type deployment_charms: Set
+        """
+        typical_cloud_charms = {
+            "openstack": {
+                "keystone",
+                "nova-compute",
+                "nova-cloud-controller",
+                "glance",
+                "openstack-dashboard",
+                "neutron-api",
+            },
+            "kubernetes": {
+                "kubernetes-worker",
+                "kubernetes-control-plane",
+                "containerd",
+                "calico",
+                "canal",
+                "etcd",
+            },
+        }
+        if self.cloud_type:
+            if self.cloud_type not in typical_cloud_charms.keys():
+                self._log_with_header(
+                    "Cloud type {} is unknown".format(self.cloud_type),
+                    level=logging.WARN,
+                )
+            return
+
+        for cloud_type, charms in typical_cloud_charms.items():
+            match = deployment_charms.intersection(charms)
+            if len(match) >= 2:
+                self._log_with_header(
+                    (
+                        "Setting cloud-type to '{}'. "
+                        "Deployment has these charms: {} that are typically from {}."
+                    ).format(cloud_type, match, cloud_type),
+                    level=logging.WARN,
+                )
+                self.cloud_type = cloud_type
+                return
+
     def check_spaces(self, parsed_yaml):
         """Check that relations end with the same endpoint."""
         space_checks = self.lint_rules.get("space checks", {})
@@ -1089,6 +1134,9 @@ class Linter:
 
             # Build a list of deployed charms and mapping of charms <-> applications
             self.map_charms(parsed_yaml[applications])
+
+            # Automatically detects cloud type if it's not passed as argument
+            self.check_cloud_type(self.model.charms)
 
             # Parse SAAS / remote-applications
             self.parse_cmr_apps(parsed_yaml)

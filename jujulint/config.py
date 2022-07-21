@@ -80,9 +80,9 @@ class Config(Configuration):
             "-t",
             "--cloud-type",
             help=(
-                "Sets the cloud type when specifying a YAML file to audit with -f or --cloud-file."
+                "Sets the cloud type when specifying a YAML file to audit with -t or --cloud-type."
             ),
-            dest="manual-type",
+            dest="cloud-type",
         )
         self.parser.add_argument(
             "-o",
