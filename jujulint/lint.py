@@ -37,7 +37,7 @@ import jujulint.util as utils
 from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
 
-VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte")
+VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte", "search")
 
 # Generic named tuple to represent the binary config operators (eq,neq,gte)
 ConfigOperator = collections.namedtuple(
@@ -290,6 +290,49 @@ class Linter:
         return self.check_config_generic(
             operator, app_name, check_value, config_key, app_config
         )
+
+    def search(self, app_name, check_value, config_key, app_config):
+        """Scan through the charm config looking for a match using the regex pattern."""
+        actual_value = app_config.get(config_key)
+        if actual_value:
+            if re.search(str(check_value), str(actual_value)):
+                self._log_with_header(
+                    "Application {} has a valid config for '{}': regex {} found at {}".format(
+                        app_name,
+                        config_key,
+                        repr(check_value),
+                        repr(actual_value),
+                    )
+                )
+                return True
+            self.handle_error(
+                {
+                    "id": "config-search-check",
+                    "tags": ["config", "search"],
+                    "description": "Checks for config condition 'search'",
+                    "application": app_name,
+                    "rule": config_key,
+                    "expected_value": check_value,
+                    "actual_value": actual_value,
+                    "message": "Application {} has an invalid config for '{}': regex {} not found at {}".format(
+                        app_name,
+                        config_key,
+                        repr(check_value),
+                        repr(actual_value),
+                    ),
+                }
+            )
+            return False
+
+        self._log_with_header(
+            "Application {} has no config for '{}', can't search the regex pattern {}.".format(
+                app_name,
+                config_key,
+                repr(check_value),
+            ),
+            level=logging.WARN,
+        )
+        return False
 
     def check_config_generic(
         self, operator, app_name, check_value, config_key, app_config
