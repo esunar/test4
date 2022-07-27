@@ -47,6 +47,7 @@ openstack mandatory: &openstack-mandatory-charms
  - nova-cloud-controller
  - nova-compute
  - openstack-dashboard
+ - bootstack-charmers-homer-dashboard
  - *openstack-mandatory-charms-networking
 
 openstack mandatory deps base: &openstack-mandatory-deps-base

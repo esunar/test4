@@ -1,0 +1,9 @@
+!include includes/base.yaml
+!include includes/networking/ovn.yaml
+!include includes/database/percona-cluster.yaml
+!include includes/release/ussuri.yaml
+!include includes/series/bionic.yaml
+!include includes/openstack.yaml
+!include includes/operations.yaml
+!include includes/saas.yaml
+!include includes/aggregator-openstack.yaml
