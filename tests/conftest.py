@@ -10,6 +10,7 @@
 
 import os
 import sys
+from unittest.mock import MagicMock
 
 import mock
 import pytest
@@ -76,6 +77,24 @@ def linter(parser):
 
 
 @pytest.fixture
+def cloud():
+    """Provide a Cloud instance to test."""
+    from jujulint.cloud import Cloud
+
+    rules = {
+        "known charms": ["nrpe", "ubuntu", "nagios"],
+        "operations mandatory": ["nagios"],
+    }
+    cloud = Cloud(name="test_cloud", lint_rules=rules)
+    # set initial cloud state
+    cloud.cloud_state = {
+        "my_controller": {"models": {"my_model_1": {}, "my_model_2": {}}}
+    }
+    cloud.logger = MagicMock()
+    return cloud
+
+
+@pytest.fixture
 def juju_status():
     """Provide a base juju status for testing."""
     return {
@@ -124,4 +143,70 @@ def juju_status():
                 "machine-status": {"current": "running"},
             },
         },
+    }
+
+
+@pytest.fixture
+def juju_export_bundle():
+    """Simulate a cloud with one controller and two bundles.
+
+    my_model_1 nrpe offers the monitors endpoint
+    my_model_2 nagios consumes the monitors endpoint from my_model_1
+    """
+    return {
+        "my_model_1": [
+            {
+                "series": "focal",
+                "saas": {"remote-2290e64ea1ac41858eb06a69b6a9d8cc": {}},
+                "applications": {
+                    "nrpe": {"charm": "nrpe", "channel": "stable", "revision": 86},
+                    "ubuntu": {
+                        "charm": "ubuntu",
+                        "channel": "stable",
+                        "revision": 19,
+                        "num_units": 1,
+                        "to": ["0"],
+                        "constraints": "arch=amd64",
+                    },
+                },
+                "machines": {"0": {"constraints": "arch=amd64"}},
+                "relations": [
+                    ["nrpe:general-info", "ubuntu:juju-info"],
+                    [
+                        "nrpe:monitors",
+                        "remote-2290e64ea1ac41858eb06a69b6a9d8cc:monitors",
+                    ],
+                ],
+            },
+            {
+                "applications": {
+                    "nrpe": {
+                        "offers": {
+                            "nrpe": {
+                                "endpoints": ["monitors"],
+                                "acl": {"admin": "admin"},
+                            }
+                        }
+                    }
+                }
+            },
+        ],
+        "my_model_2": [
+            {
+                "series": "bionic",
+                "saas": {"nrpe": {"url": "my_controller:admin/my_model_1.nrpe"}},
+                "applications": {
+                    "nagios": {
+                        "charm": "nagios",
+                        "channel": "stable",
+                        "revision": 49,
+                        "num_units": 1,
+                        "to": ["0"],
+                        "constraints": "arch=amd64",
+                    }
+                },
+                "machines": {"0": {"constraints": "arch=amd64"}},
+                "relations": [["nagios:monitors", "nrpe:monitors"]],
+            }
+        ],
     }

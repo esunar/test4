@@ -34,7 +34,7 @@ Todo:
 
 """
 import socket
-from subprocess import check_output
+from subprocess import CalledProcessError, check_output
 
 import yaml
 from fabric2 import Config, Connection
@@ -94,6 +94,7 @@ class Cloud:
             self.logger.debug("Running local command: {}".format(command))
             args = command.split(" ")
             return check_output(args)
+
         elif self.access_method == "ssh":
             if self.sudo_user:
                 self.logger.debug(
@@ -272,9 +273,22 @@ class Cloud:
 
     def get_juju_bundle(self, controller, model):
         """Get an export of the juju bundle for the provided model."""
-        bundle_data = self.run_command(
-            "juju export-bundle -m {}:{}".format(controller, model)
-        )
+        try:
+            bundle_data = self.run_command(
+                "juju export-bundle -m {}:{}".format(controller, model)
+            )
+        except CalledProcessError as e:
+            self.logger.error(e)
+            self.logger.warn(
+                (
+                    "An error happened to get the bundle on {}:{}. "
+                    "If the model doesn't have apps, disconsider this message.".format(
+                        controller, model
+                    )
+                )
+            )
+            return
+
         bundles = self.parse_yaml(bundle_data)
         self.logger.info(
             "[{}] Processing Juju bundle export for model {} on controller {}".format(
@@ -286,37 +300,33 @@ class Cloud:
                 model, controller, bundles
             )
         )
-        if len(bundles) > 0:
-            combined = {}
-            for bundle in bundles:
-                combined.update(bundle)
-            if "applications" in combined:
-                for application in combined["applications"].keys():
+        # NOTE(gabrielcocenza) export-bundle can have an overlay when there is crm.
+        for bundle in bundles:
+            if "applications" in bundle:
+                for application in bundle["applications"].keys():
                     self.logger.debug(
                         "Parsing configuration for application {} in model {}: {}".format(
-                            application, model, combined
+                            application, model, bundle
                         )
                     )
-                    application_config = combined["applications"][application]
-                    if (
+                    application_config = bundle["applications"][application]
+                    self.cloud_state[controller]["models"][model].setdefault(
+                        "applications", {}
+                    )
+
+                    self.cloud_state[controller]["models"][model][
                         "applications"
-                        not in self.cloud_state[controller]["models"][model]
-                    ):
+                    ].setdefault(application, {}).update(application_config)
+            if "saas" in bundle:
+                for app in bundle.get("saas"):
+                    # offer side doesn't show the url of the app
+                    if bundle["saas"][app].get("url"):
+                        self.cloud_state[controller]["models"][model].setdefault(
+                            "saas", {}
+                        ).update(bundle["saas"])
                         self.cloud_state[controller]["models"][model][
-                            "applications"
-                        ] = {}
-                    if (
-                        application
-                        not in self.cloud_state[controller]["models"][model][
-                            "applications"
-                        ].keys()
-                    ):
-                        self.cloud_state[controller]["models"][model]["applications"][
-                            application
-                        ] = {}
-                    self.cloud_state[controller]["models"][model]["applications"][
-                        application
-                    ].update(application_config)
+                            "saas"
+                        ].setdefault(app, {}).update(bundle["saas"][app])
 
     def get_juju_state(self):
         """Update our view of Juju-managed application state."""
