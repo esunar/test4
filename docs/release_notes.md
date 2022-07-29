@@ -1,9 +1,10 @@
 # Release Notes
 
-The recommended way to pick up the latest snap release is via the latest/edge channel:
+The recommended way to pick up the latest stable snap release is via the latest/stable channel.
+latest/edge should only be used for development and testing purposes.
 
 ```
-$ snap install juju-lint --channel=latest/edge
+$ snap install juju-lint --channel=latest/stable
 ```
 
 # 1.0.3 (July 2022)
