@@ -6,10 +6,11 @@ The recommended way to pick up the latest snap release is via the latest/edge ch
 $ snap install juju-lint --channel=latest/edge
 ```
 
-# 1.0.3 (July 2002)
+# 1.0.3 (July 2022)
 
 ## Summary of the changes
 
+- ceph-mon config checks for slow requests
 - juju-lint automatically include cloud_type if not passed in the cli
 - added new rule files matching the clouds used on fce-templates
 - added new regex operator for checking charms configurations
@@ -18,18 +19,17 @@ $ snap install juju-lint --channel=latest/edge
 
 ## Bug Fixes
 
+- [expose monitoring threshold/severity for "slow requests"](https://bugs.launchpad.net/juju-lint/+bug/1922602)
 - [juju-lint fails to parse default bundle from SolQA/FE](https://bugs.launchpad.net/juju-lint/+bug/1972158)
 - [juju-lint crashes on models without applications when collecting bundles](https://bugs.launchpad.net/juju-lint/+bug/1929625)
-- [juju-lint should automatically include cloud_type](https://bugs.launchpad.net/juju-lint/+bug/1929625)
+- [juju-lint should automatically include cloud_type](https://bugs.launchpad.net/juju-lint/+bug/1980019)
 - [charm 'ceph-dashboard' and 'openstack-loadbalancer' not recognised](https://bugs.launchpad.net/juju-lint/+bug/1965243)
 - [charm 'bootstack-charmers-homer-dashboard' not recognised](https://bugs.launchpad.net/juju-lint/+bug/1965244)
-- [juju-lint fails to parse default bundle from SolQA/FE](https://bugs.launchpad.net/juju-lint/+bug/1972158)
 - [default queue length checks for rabbitmq on openstack clouds is far too small](https://bugs.launchpad.net/juju-lint/+bug/1939748)
 - [getting many KeyError errors during spaces checks](https://bugs.launchpad.net/juju-lint/+bug/1979382)
-- [default queue length checks for rabbitmq on openstack clouds is far too small](https://bugs.launchpad.net/juju-lint/+bug/1939748)
 - [juju-lint doesn't build the snap with local repository](https://bugs.launchpad.net/juju-lint/+bug/1979696)
 
-# 1.0.2 (June 2002)
+# 1.0.2 (June 2022)
 
 ## Summary of the changes
 - added black and isort to the project
@@ -66,7 +66,6 @@ $ snap install juju-lint --channel=latest/edge
 - [juju-lint fails on exported bundle with overlay section](https://bugs.launchpad.net/juju-lint/+bug/1915934)
 - [parsing for charm name does not properly handle charm hub sources](https://bugs.launchpad.net/juju-lint/+bug/1950980)
 - [add targeting options to config checks (similar to subordinate rules)](https://bugs.launchpad.net/juju-lint/+bug/1944406)
-- [Add targeting options to config checks (similar to subordinate rules)](https://bugs.launchpad.net/juju-lint/+bug/1944406)
 - [juju lint-false positives for double nrpe](https://bugs.launchpad.net/juju-lint/+bug/1855858)
 - [juju lint expecting hw-health on VM](https://bugs.launchpad.net/juju-lint/+bug/1903973)
 - [ovn should be checked in addition to neutron-openvswitch](https://bugs.launchpad.net/juju-lint/+bug/1939434)
@@ -74,7 +73,7 @@ $ snap install juju-lint --channel=latest/edge
 - [juju-lint does not recognize mysql-router and mysql-innodb-cluster charms](https://bugs.launchpad.net/juju-lint/+bug/1904038)
 - [juju-lint canonical-rules.yaml needs updating for focal-ussuri](https://bugs.launchpad.net/juju-lint/+bug/1896551)
 - [juju-lint throws a false positive about the missing LMA if the LMA is deployed in the separate model](https://bugs.launchpad.net/juju-lint/+bug/1897262)
-- [add "status age" configuration for unexpected status check](https://code.launchpad.net/~jfguedez/juju-lint/+git/juju-lint/+merge/408516)
+- [add "status age" configuration for unexpected status check](https://bugs.launchpad.net/juju-lint/+bug/1942998)
 - [juju-lint should differentiate between config that comes from the user / default values](https://bugs.launchpad.net/juju-lint/+bug/1943222)
 - [juju-lint does not support Kubernetes deployment](https://bugs.launchpad.net/juju-lint/+bug/1805875)
 - [juju-lint does not verify deployment of kubernetes-service-checks](https://bugs.launchpad.net/juju-lint/+bug/1940546)
