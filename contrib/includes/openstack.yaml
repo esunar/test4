@@ -1,108 +1,114 @@
 openstack config base: &openstack-config-base
- ceph-radosgw:
-  ceph-osd-replication-count:
-   eq: 3
- cinder-ceph:
-  ceph-osd-replication-count:
-   eq: 3
- glance:
-  ceph-osd-replication-count:
-   eq: 3
- neutron-api:
-  path-mtu:
-   eq: 9000
-  global-physnet-mtu:
-   eq: 9000
- nova-compute:
-  cpu-model:
-   neq: ""
-  ceph-osd-replication-count:
-   eq: 3
- rabbitmq-server:
-  cluster-partition-handling:
-   eq: "pause_minority"
-  queue_thresholds:
-   search: "\\W\\*, \\W\\*, 25000, 27500"
- keystone:
-  token-expiration:
-   gte: 86400
- sysconfig:
-  governor:
-   eq: "performance"
+  ceph-radosgw:
+    ceph-osd-replication-count:
+      eq: 3
+  #NOTE(gabrielcocenza) ceph-mon config check should be temporary LP#1922602
+  ceph-mon:
+    nagios_additional_checks_critical:
+      eq: true
+    nagios_additional_checks:
+      eq: '{"ceph_slow_requests": "slow requests"}'
+  cinder-ceph:
+    ceph-osd-replication-count:
+      eq: 3
+  glance:
+    ceph-osd-replication-count:
+      eq: 3
+  neutron-api:
+    path-mtu:
+      eq: 9000
+    global-physnet-mtu:
+      eq: 9000
+  nova-compute:
+    cpu-model:
+      neq: ""
+    ceph-osd-replication-count:
+      eq: 3
+  rabbitmq-server:
+    cluster-partition-handling:
+      eq: "pause_minority"
+    queue_thresholds:
+      search: "\\W\\*, \\W\\*, 25000, 27500"
+  keystone:
+    token-expiration:
+      gte: 86400
+  sysconfig:
+    governor:
+      eq: "performance"
 
 openstack config:
- << : [ *openstack-config-base, *openstack-config-networking, *openstack-config-database ]
+  << : [ *openstack-config-base, *openstack-config-networking, *openstack-config-database ]
 
 openstack mandatory: &openstack-mandatory-charms
- - ceilometer
- - ceilometer-agent
- - ceph-mon
- - ceph-osd
- - cinder
- - cinder-ceph
- - glance
- - heat
- - keystone
- - neutron-api
- - nova-cloud-controller
- - nova-compute
- - openstack-dashboard
- - bootstack-charmers-homer-dashboard
- - *openstack-mandatory-charms-networking
+  - ceilometer
+  - ceilometer-agent
+  - ceph-mon
+  - ceph-osd
+  - cinder
+  - cinder-ceph
+  - glance
+  - heat
+  - keystone
+  - neutron-api
+  - nova-cloud-controller
+  - nova-compute
+  - openstack-dashboard
+  - bootstack-charmers-homer-dashboard
+  - *openstack-mandatory-charms-networking
 
 openstack mandatory deps base: &openstack-mandatory-deps-base
- - haproxy
- - memcached
- - rabbitmq-server
+  - haproxy
+  - memcached
+  - rabbitmq-server
 
 openstack mandatory deps: &openstack-mandatory-deps
- - *openstack-mandatory-deps-base
- - *openstack-mandatory-deps-database
+  - *openstack-mandatory-deps-base
+  - *openstack-mandatory-deps-database
 
 openstack mandatory subordinates: &openstack-mandatory-subs
- - hacluster
+  - hacluster
 
 openstack optional charms: &openstack-optional-charms
- - aodh
- - barbican
- - barbican-vault
- - ceph-fs
- - ceph-radosgw
- - cinder-backup
- - designate
- - designate-bind
- - easyrsa
- - etcd
- - glance-simplestreams-sync
- - glance-sync-slave
- - gnocchi
- - ironic-api
- - ironic-conductor
- - keystone-ldap
- - manila
- - manila-dashboard
- - manila-ganesha
- - masakari
- - masakari-monitors
- - mongodb  # Optional since Gnocchi
- - neutron-gateway
- - neutron-api-plugin-ironic
- - octavia
- - octavia-dashboard
- - octavia-diskimage-retrofit
- - pacemaker-remote
- - placement
- - swift-proxy
- - swift-storage
- - vault
- - cinder-lvm
+  - aodh
+  - barbican
+  - barbican-vault
+  - ceph-fs
+  - ceph-radosgw
+  - cinder-backup
+  - designate
+  - designate-bind
+  - easyrsa
+  - etcd
+  - glance-simplestreams-sync
+  - glance-sync-slave
+  - gnocchi
+  - ironic-api
+  - ironic-conductor
+  - keystone-ldap
+  - manila
+  - manila-dashboard
+  - manila-ganesha
+  - masakari
+  - masakari-monitors
+  - mongodb  # Optional since Gnocchi
+  - neutron-gateway
+  - neutron-api-plugin-ironic
+  - octavia
+  - octavia-dashboard
+  - octavia-diskimage-retrofit
+  - pacemaker-remote
+  - placement
+  - swift-proxy
+  - swift-storage
+  - vault
+  - cinder-lvm
 
 cisco-aci-charms: &cisco-aci-charms
- - neutron-api-plugin-aci
- - openstack-dashboard-plugin-gbp
+  - neutron-api-plugin-aci
+  - openstack-dashboard-plugin-gbp
 
 trilio-charms: &trilio-charms
- - trilio-dm-api
- - trilio-horizon-plugin
- - trilio-data-mover
- - trilio-wlm
+  - trilio-dm-api
+  - trilio-horizon-plugin
+  - trilio-data-mover
+  - trilio-wlm
