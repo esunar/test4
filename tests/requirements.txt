@@ -1,6 +1,8 @@
 # Module requirements
 black
+colorama
 flake8
+pyproject-flake8
 flake8-colors
 flake8-docstrings
 flake8-html
@@ -13,3 +15,4 @@ pytest
 pytest-cov
 pytest-html
 pytest-mock
+pre-commit
