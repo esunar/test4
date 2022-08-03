@@ -177,12 +177,10 @@ class Linter:
 
         return
 
-    def atoi(self, val):
+    @staticmethod
+    def atoi(val):
         """Deal with complex number representations as strings, returning a number."""
         if type(val) != str:
-            return val
-
-        if type(val[-1]) != str:
             return val
 
         try:
@@ -191,7 +189,7 @@ class Linter:
             return val
 
         quotient = 1024
-        if val[-1].lower() == val[-1]:
+        if val[-1].islower():
             quotient = 1000
 
         conv = {"g": quotient**3, "m": quotient**2, "k": quotient}
@@ -293,8 +291,8 @@ class Linter:
 
     def search(self, app_name, check_value, config_key, app_config):
         """Scan through the charm config looking for a match using the regex pattern."""
-        actual_value = app_config.get(config_key)
-        if actual_value:
+        if config_key in app_config:
+            actual_value = app_config.get(config_key)
             if re.search(str(check_value), str(actual_value)):
                 self._log_with_header(
                     "Application {} has a valid config for '{}': regex {} found at {}".format(

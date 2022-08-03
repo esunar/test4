@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from jujulint import check_spaces
+from jujulint import check_spaces, lint
 
 
 class TestUtils:
@@ -71,6 +71,31 @@ class TestLinter:
         """Test that the base rules/status have no errors."""
         linter.do_lint(juju_status)
         assert len(linter.output_collector["errors"]) == 0
+
+    def test_minimal_rules_without_subordinates(self, linter, juju_status):
+        """Process rules with none of the applications having subordinate charms."""
+        juju_status["applications"]["ubuntu"]["units"]["ubuntu/0"].pop("subordinates")
+        juju_status["applications"].pop("ntp")
+        linter.lint_rules["subordinates"] = {}
+
+        linter.do_lint(juju_status)
+        assert len(linter.output_collector["errors"]) == 0
+
+    def test_minimal_rules_json_output(self, linter, juju_status, mocker):
+        """Process rules and print output in json format."""
+        expected_output = "{result: dict}"
+        json_mock = mocker.patch.object(
+            lint.json, "dumps", return_value=expected_output
+        )
+        print_mock = mocker.patch("builtins.print")
+
+        linter.output_format = "json"
+        linter.do_lint(juju_status)
+
+        json_mock.assert_called_once_with(
+            linter.output_collector, indent=2, sort_keys=True
+        )
+        print_mock.assert_called_once_with(expected_output)
 
     def test_charm_identification(self, linter, juju_status):
         """Test that applications are mapped to charms."""
@@ -205,6 +230,19 @@ class TestLinter:
         assert len(errors) == 1
         assert errors[0]["id"] == "AZ-invalid-number"
         assert errors[0]["num_azs"] == 2
+
+    def test_az_missing(self, linter, juju_status, mocker):
+        """Test that AZ parsing logs warning if AZ is not found."""
+        # duplicate a AZ name so we have 2 AZs instead of the expected 3
+        juju_status["machines"]["2"]["hardware"] = ""
+        expected_msg = (
+            "Machine 2 has no availability-zone info in hardware field; skipping."
+        )
+        logger_mock = mocker.patch.object(linter, "_log_with_header")
+
+        linter.do_lint(juju_status)
+
+        logger_mock.assert_any_call(expected_msg, level=logging.WARN)
 
     def test_az_balancing(self, linter, juju_status):
         """Test that applications are balanced across AZs."""
@@ -614,8 +652,8 @@ applications:
         assert errors[0]["expected_value"] == 3
         assert errors[0]["actual_value"] == 0
 
-    def test_config_isset_false(self, linter, juju_status):
-        """Test the config condition 'isset' false."""
+    def test_config_isset_false_fail(self, linter, juju_status):
+        """Test error handling if config condition 'isset'=false is not met."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": False}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": 0}
         linter.do_lint(juju_status)
@@ -627,8 +665,17 @@ applications:
         assert errors[0]["rule"] == "fake-opt"
         assert errors[0]["actual_value"] == 0
 
-    def test_config_isset_true(self, linter, juju_status):
-        """Test the config condition 'isset' true."""
+    def test_config_isset_false_pass(self, linter, juju_status):
+        """Test handling if config condition 'isset'=false is met."""
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": False}}}
+        juju_status["applications"]["ubuntu"]["options"] = {}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 0
+
+    def test_config_isset_true_fail(self, linter, juju_status):
+        """Test error handling if config condition 'isset'=true is not met."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": True}}}
         juju_status["applications"]["ubuntu"]["options"] = {}
         linter.do_lint(juju_status)
@@ -638,6 +685,15 @@ applications:
         assert errors[0]["id"] == "config-isset-check-true"
         assert errors[0]["application"] == "ubuntu"
         assert errors[0]["rule"] == "fake-opt"
+
+    def test_config_isset_true_pass(self, linter, juju_status):
+        """Test handling if config condition 'isset'=true is met."""
+        linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": True}}}
+        juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": 0}
+        linter.do_lint(juju_status)
+
+        errors = linter.output_collector["errors"]
+        assert len(errors) == 0
 
     def test_config_search_valid(self, linter, juju_status):
         """Test the config condition 'search' when valid."""
@@ -669,6 +725,62 @@ applications:
         assert errors[0]["rule"] == "fake_opt"
         assert errors[0]["expected_value"] == "\\W\\*, \\W\\*, 25000, 27500"
         assert errors[0]["actual_value"] == "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+
+    def test_config_search_missing(self, linter, mocker):
+        """Test the config search method logs warning if the config option is missing."""
+        app_name = "ubuntu"
+        check_value = 0
+        config_key = "missing-opt"
+        app_config = {}
+        expected_log = (
+            "Application {} has no config for '{}', can't search the regex pattern "
+            "{}."
+        ).format(app_name, config_key, repr(check_value))
+
+        logger_mock = mocker.patch.object(linter, "_log_with_header")
+
+        result = linter.search(app_name, check_value, config_key, app_config)
+
+        assert result is False
+        logger_mock.assert_called_once_with(expected_log, level=logging.WARN)
+
+    def test_check_config_generic_missing_option(self, linter, mocker):
+        """Test behavior of check_config_generic() when config option is missing."""
+        operator_ = lint.ConfigOperator(
+            name="eq", repr="==", check=None, error_template=""
+        )
+        app_name = "ubuntu"
+        check_value = 0
+        config_key = "missing-opt"
+        app_config = {}
+        expected_log = (
+            "Application {} has no config for '{}', cannot determine if {} " "{}."
+        ).format(app_name, config_key, operator_.repr, repr(check_value))
+
+        logger_mock = mocker.patch.object(linter, "_log_with_header")
+
+        result = linter.check_config_generic(
+            operator_, app_name, check_value, config_key, app_config
+        )
+
+        logger_mock.assert_called_once_with(expected_log, level=logging.WARN)
+        assert result is False
+
+    def test_check_config_unknown_check_operator(self, linter, mocker):
+        """Test that warning is logged when unknown check operator is encountered."""
+        app_name = "ubuntu"
+        config = {}
+        bad_rule = "bad_rule"
+        bad_check = "bad_check"
+        rules = {bad_rule: {bad_check: 0}}
+        expected_log = (
+            "Application {} has unknown check operation for {}: " "{}."
+        ).format(app_name, bad_rule, bad_check)
+
+        logger_mock = mocker.patch.object(linter, "_log_with_header")
+
+        linter.check_config(app_name, config, rules)
+        logger_mock.assert_any_call(expected_log, level=logging.WARN)
 
     def test_parse_cmr_apps_export_bundle(self, linter):
         """Test the charm CMR parsing for bundles."""
@@ -702,6 +814,16 @@ applications:
         }
         linter.parse_cmr_apps(parsed_yaml)
         assert linter.model.cmr_apps == {"grafana", "nagios"}
+
+    def test_parse_cmr_apps_graylog(self, linter):
+        """Test the charm CMR parsing adds elasticsearch dependency if graylog is present."""
+        parsed_yaml = {
+            "saas": {
+                "graylog": {"url": "foundations-maas:admin/lma.graylog"},
+            }
+        }
+        linter.parse_cmr_apps(parsed_yaml)
+        assert linter.model.cmr_apps == {"graylog", "elasticsearch"}
 
     def test_check_charms_ops_mandatory_crm_success(self, linter):
         """
@@ -748,8 +870,9 @@ applications:
         rules_path.write_text('---\nkey:\n "value"')
 
         linter.filename = str(rules_path)
-        linter.read_rules()
+        result = linter.read_rules()
         assert linter.lint_rules == {"key": "value"}
+        assert result
 
     def test_read_rules_include(self, linter, tmp_path):
         """Test that rules YAML with an include is imported as expected."""
@@ -760,8 +883,41 @@ applications:
         rules_path.write_text('---\n!include include.yaml\nkey:\n "value"')
 
         linter.filename = str(rules_path)
-        linter.read_rules()
+        result = linter.read_rules()
         assert linter.lint_rules == {"key": "value", "key-inc": "value2"}
+        assert result
+
+    def test_read_rules_overrides(self, linter, tmp_path):
+        """Test application of override values to the rules."""
+        rules_path = tmp_path / "rules.yaml"
+        rules_path.write_text('---\nkey:\n "value"\nsubordinates: {}')
+
+        linter.overrides = "override_1:value_1#override_2:value_2"
+
+        linter.filename = str(rules_path)
+        linter.read_rules()
+        assert linter.lint_rules == {
+            "key": "value",
+            "subordinates": {
+                "override_1": {"where": "value_1"},
+                "override_2": {"where": "value_2"},
+            },
+        }
+
+    def test_read_rules_fail(self, linter, mocker):
+        """Test handling of a read_rules() failure."""
+        rule_file = "rules.yaml"
+        mocker.patch.object(lint.os.path, "isfile", return_value=False)
+        logger_mock = mock.MagicMock()
+        linter.logger = logger_mock
+        linter.filename = rule_file
+
+        result = linter.read_rules()
+
+        assert not result
+        logger_mock.error.assert_called_once_with(
+            "Rules file {} does not exist.".format(rule_file)
+        )
 
     check_spaces_example_bundle = {
         "applications": {
@@ -787,6 +943,7 @@ applications:
     }
 
     def test_check_spaces_detect_mismatches(self, linter, mocker):
+        """Test detection mismatched endpoint bindings."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
@@ -805,6 +962,7 @@ applications:
         )
 
     def test_check_spaces_enforce_endpoints(self, linter):
+        """Test detection of mismatched endpoints."""
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint enforced.
@@ -824,6 +982,7 @@ applications:
         assert len(errors) == 2
 
     def test_check_spaces_enforce_relations(self, linter):
+        """Test detection of missing relations."""
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint enforced.
@@ -845,6 +1004,7 @@ applications:
         assert len(errors) == 2
 
     def test_check_spaces_ignore_endpoints(self, linter, mocker):
+        """Test not raising errors about endpoints that should be ignored."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
@@ -867,6 +1027,7 @@ applications:
         assert mock_log.call_count == 0
 
     def test_check_spaces_ignore_relations(self, linter, mocker):
+        """Test not raising errors about missing relations that should be ignored."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
@@ -988,3 +1149,62 @@ applications:
 
         linter.check_spaces(bundle)
         assert logger_mock.warning.call_args_list == expected_warning_callings
+
+    def test_check_spaces_exception_handling(self, linter, mocker):
+        """Test exception handling during check_spaces() method."""
+        expected_traceback = "python traceback"
+        expected_msg = (
+            "Exception caught during space check; please check space "
+            "by hand. {}".format(expected_traceback)
+        )
+        mocker.patch.object(linter, "_handle_space_mismatch", side_effect=RuntimeError)
+        mocker.patch.object(
+            lint.traceback, "format_exc", return_value=expected_traceback
+        )
+        mock_print = mocker.patch("builtins.print")
+        linter.model.app_to_charm = self.check_spaces_example_app_charm_map
+
+        # Run the space check.
+        # Based on the above bundle, we should have exactly one mismatch.
+        linter.check_spaces(self.check_spaces_example_bundle)
+
+        mock_print.assert_called_once_with(expected_msg)
+
+    @pytest.mark.parametrize(
+        "regex_error, check_value, actual_value",
+        [
+            (True, "same", "same"),
+            (True, "same", "different"),
+            (False, "same", "same"),
+            (False, "same", "different"),
+        ],
+    )
+    def test_helper_operator_check(
+        self, regex_error, check_value, actual_value, mocker
+    ):
+        """Test comparing values using "helper_operator_check()" function."""
+        if regex_error:
+            mocker.patch.object(lint.re, "match", side_effect=lint.re.error(""))
+
+        expected_result = check_value == actual_value
+
+        result = lint.helper_operator_eq_check(check_value, actual_value)
+
+        assert bool(result) == expected_result
+
+    @pytest.mark.parametrize(
+        "input_str, expected_int",
+        [
+            (1, 1),  # return non-strings unchanged
+            ("not_number_1", "not_number_1"),  # return non-numbers unchanged
+            ("2k", 2000),  # convert kilo suffix with quotient 1000
+            ("2K", 2048),  # convert Kilo suffix with quotient 1024
+            ("2m", 2000000),  # convert mega suffix with quotient 1000
+            ("2M", 2097152),  # convert Mega suffix with quotient 1024
+            ("2g", 2000000000),  # convert giga suffix with quotient 1000
+            ("2G", 2147483648),  # convert Giga suffix with quotient 1024
+        ],
+    )
+    def test_linter_atoi(self, input_str, expected_int, linter):
+        """Test conversion of string values (e.g. 2M (Megabytes)) to integers."""
+        assert linter.atoi(input_str) == expected_int

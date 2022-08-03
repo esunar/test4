@@ -61,7 +61,6 @@ class Cloud:
         # instance variables
         self.cloud_state = {}
         self.access_method = "local"
-        self.ssh_host = ""
         self.sudo_user = ""
         self.hostname = ""
         self.name = ""
@@ -126,7 +125,8 @@ class Cloud:
     def run_unit_command(self, target, command):
         """Run a command on a Juju unit and return the output."""
 
-    def parse_yaml(self, yaml_string):
+    @staticmethod
+    def parse_yaml(yaml_string):
         """Parse YAML using PyYAML."""
         data = yaml.safe_load_all(yaml_string)
         return list(data)

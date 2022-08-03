@@ -19,6 +19,8 @@ import pytest
 test_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, test_path + "/../")
 
+from jujulint import cloud  # noqa: E402
+
 
 @pytest.fixture
 def mocked_pkg_resources(monkeypatch):
@@ -29,7 +31,7 @@ def mocked_pkg_resources(monkeypatch):
 
 
 @pytest.fixture
-def cli(monkeypatch):
+def cli_instance(monkeypatch):
     """Provide a test instance of the CLI class."""
     monkeypatch.setattr(
         sys, "argv", ["juju-lint", "-c", "contrib/canonical-rules.yaml"]
@@ -77,7 +79,7 @@ def linter(parser):
 
 
 @pytest.fixture
-def cloud():
+def cloud_instance():
     """Provide a Cloud instance to test."""
     from jujulint.cloud import Cloud
 
@@ -210,3 +212,14 @@ def juju_export_bundle():
             }
         ],
     }
+
+
+@pytest.fixture()
+def patch_cloud_init(mocker):
+    """Patch objects needed in Cloud.__init__() method."""
+    logger_mock = mock.MagicMock()
+    mocker.patch.object(cloud, "Logger", return_value=logger_mock)
+    connection_mock = mock.MagicMock()
+    mocker.patch.object(cloud, "Connection", return_value=connection_mock)
+    local_fqdn = "localhost"
+    mocker.patch.object(cloud.socket, "getfqdn", return_value=local_fqdn)
