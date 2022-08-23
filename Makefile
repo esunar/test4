@@ -22,8 +22,10 @@ unittests:
 	@echo "Running unit tests"
 	@tox -e unit
 
+
 test: lint unittests functional
 	@echo "Tests completed for the snap."
+
 
 reformat:
 	@echo "Reformat files with black and isort"
