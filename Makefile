@@ -13,7 +13,6 @@ help:
 	@echo " make pre-commit - run pre-commit checks on all the files"
 	@echo ""
 
-
 lint:
 	@echo "Running lint checks"
 	@tox -e lint
@@ -22,10 +21,8 @@ unittests:
 	@echo "Running unit tests"
 	@tox -e unit
 
-
 test: lint unittests functional
 	@echo "Tests completed for the snap."
-
 
 reformat:
 	@echo "Reformat files with black and isort"
@@ -49,7 +46,7 @@ dev-environment:
 
 functional: build
 	@echo "Executing functional tests using built snap"
-	@tox -e func
+	@JUJULINT_TEST_SNAP=${JUJULINT_TEST_SNAP} tox -e func -- ${FUNC_ARGS}
 
 pre-commit:
 	@tox -e pre-commit
