@@ -152,8 +152,10 @@ def test_find_space_mismatches(use_cmr, mocker):
     app_2 = "ubuntu_nrpe"
     space_1 = "space 1"
     space_2 = "space 2"
+    app_endpoint_1 = app_1 + ":endpoint"
+    app_endpoint_2 = app_2 + ":endpoint"
     relation = check_spaces.Relation(
-        "endpoint_1", "XModel" if use_cmr else "endpoint_2"
+        app_endpoint_1, "XModel" if use_cmr else app_endpoint_2
     )
     app_list = [app_1, app_2]
     app_spaces = {app_1: {space_1: "foo"}, app_2: {space_2: "bar"}}
@@ -271,8 +273,8 @@ def test_get_application_relations():
     """Test function that returns list of relations."""
     sample_yaml = {
         "relations": [
-            ("ubuntu:juju-info", "nrpe:general-info"),
-            ("vault:shared-db", "mysql-innodb-cluster:shared-db"),
+            ["ubuntu:juju-info", "nrpe:general-info"],
+            ["vault:shared-db", "mysql-innodb-cluster:shared-db"],
         ]
     }
 

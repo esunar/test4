@@ -1152,6 +1152,7 @@ applications:
 
     def test_check_spaces_exception_handling(self, linter, mocker):
         """Test exception handling during check_spaces() method."""
+        logger_mock = mock.MagicMock()
         expected_traceback = "python traceback"
         expected_msg = (
             "Exception caught during space check; please check space "
@@ -1161,14 +1162,14 @@ applications:
         mocker.patch.object(
             lint.traceback, "format_exc", return_value=expected_traceback
         )
-        mock_print = mocker.patch("builtins.print")
+        linter.logger = logger_mock
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check.
         # Based on the above bundle, we should have exactly one mismatch.
         linter.check_spaces(self.check_spaces_example_bundle)
 
-        mock_print.assert_called_once_with(expected_msg)
+        logger_mock.warn.assert_called_once_with(expected_msg)
 
     @pytest.mark.parametrize(
         "regex_error, check_value, actual_value",
@@ -1197,6 +1198,7 @@ applications:
         [
             (1, 1),  # return non-strings unchanged
             ("not_number_1", "not_number_1"),  # return non-numbers unchanged
+            ("2f", "2f"),  # unrecognized suffix returns value unchanged
             ("2k", 2000),  # convert kilo suffix with quotient 1000
             ("2K", 2048),  # convert Kilo suffix with quotient 1024
             ("2m", 2000000),  # convert mega suffix with quotient 1000

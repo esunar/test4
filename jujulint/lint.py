@@ -188,13 +188,17 @@ class Linter:
         except Exception:
             return val
 
+        suffix = val[-1]
         quotient = 1024
-        if val[-1].islower():
+        if suffix.islower():
             quotient = 1000
 
         conv = {"g": quotient**3, "m": quotient**2, "k": quotient}
 
-        return _int * conv[val[-1].lower()]
+        if suffix.lower() not in conv:
+            return val
+
+        return _int * conv[suffix.lower()]
 
     def isset(self, name, check_value, rule, config):
         """Check if value is set per rule constraints."""
@@ -788,7 +792,7 @@ class Linter:
                 )
             except Exception:
                 # FOR NOW: super quick and dirty
-                print(
+                self.logger.warn(
                     "Exception caught during space check; please check space by hand. {}".format(
                         traceback.format_exc()
                     )

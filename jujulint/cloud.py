@@ -63,7 +63,7 @@ class Cloud:
         self.access_method = "local"
         self.sudo_user = ""
         self.hostname = ""
-        self.name = ""
+        self.name = name
         self.fabric_config = {}
         self.lint_rules = lint_rules
         self.lint_overrides = lint_overrides
@@ -85,7 +85,6 @@ class Cloud:
                 self.access_method = "ssh"
         elif access_method == "local":
             self.hostname = socket.getfqdn()
-        self.name = name
 
     def run_command(self, command):
         """Run a command via fabric on the local or remote host."""

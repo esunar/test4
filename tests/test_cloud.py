@@ -322,7 +322,7 @@ def test_get_juju_models(patch_cloud_init, success, mocker):
     controller_name = "controller_1"
     controllers = {controller_name: {}} if success else {}
 
-    mocker.patch.object(cloud.Cloud, "run_command", return_value=success)
+    run_cmd_mock = mocker.patch.object(cloud.Cloud, "run_command", return_value=success)
     mocker.patch.object(cloud.Cloud, "parse_yaml", return_value=model_list)
     mocker.patch.object(cloud.Cloud, "get_juju_controllers", return_value=controllers)
 
@@ -333,6 +333,9 @@ def test_get_juju_models(patch_cloud_init, success, mocker):
 
     if success:
         assert result
+        run_cmd_mock.assert_called_once_with(
+            "juju models -c {} --format yaml".format(controller_name)
+        )
         for model in [model_foo, model_bar]:
             model_name = model["short-name"]
             model_config = cloud_instance.cloud_state[controller_name]["models"][

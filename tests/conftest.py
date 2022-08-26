@@ -217,9 +217,6 @@ def juju_export_bundle():
 @pytest.fixture()
 def patch_cloud_init(mocker):
     """Patch objects needed in Cloud.__init__() method."""
-    logger_mock = mock.MagicMock()
-    mocker.patch.object(cloud, "Logger", return_value=logger_mock)
-    connection_mock = mock.MagicMock()
-    mocker.patch.object(cloud, "Connection", return_value=connection_mock)
-    local_fqdn = "localhost"
-    mocker.patch.object(cloud.socket, "getfqdn", return_value=local_fqdn)
+    mocker.patch.object(cloud, "Logger")
+    mocker.patch.object(cloud, "Connection")
+    mocker.patch.object(cloud.socket, "getfqdn", return_value="localhost")
