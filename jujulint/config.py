@@ -22,6 +22,8 @@ from argparse import ArgumentParser
 
 from confuse import Configuration
 
+from jujulint.util import DeprecateAction
+
 
 class Config(Configuration):
     """Helper class for holding parsed config, extending confuse's BaseConfiguraion class."""
@@ -44,18 +46,22 @@ class Config(Configuration):
             "-d",
             "--output-dir",
             type=str,
-            default="output",
-            nargs="?",
-            help="The folder to use when saving gathered cloud data and lint reports.",
+            default="",
+            metavar="DIR",
+            help=(
+                "Dump gathered cloud state data into %(metavar)s. "
+                "Note that %(metavar)s must exist and be writable by the user. "
+                "Use with caution, as dumps will contain sensitve data. "
+                "This feature is disabled by default."
+            ),
             dest="output.folder",
         )
         self.parser.add_argument(
             "--dump-state",
             type=str,
-            help=(
-                "Optionally, dump cloud state as YAML into --output-dir."
-                "Use with caution, as dumps will contain sensitve data."
-            ),
+            nargs="*",
+            action=DeprecateAction,
+            help="DEPRECATED. See --output-dir for the current behavior",
             dest="output.dump",
         )
         self.parser.add_argument(

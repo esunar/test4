@@ -47,3 +47,50 @@ async def test_audit_local_cloud(ops_test, local_cloud, rules_file):
         f"controller {ops_test.controller_name}, model {ops_test.model_name}" in stderr
     )
     assert returncode == 0
+
+
+@pytest.mark.cloud
+async def test_output_folder(ops_test, local_cloud, rules_file, tmp_path):
+    """Test juju-lint state output to folder."""
+    all_data_yaml = tmp_path / "all-data.yaml"
+    cloudstate_yaml = tmp_path / f"{local_cloud}-state.yaml"
+    assert not all_data_yaml.exists() and not cloudstate_yaml.exists()
+
+    await ops_test.model.wait_for_idle()
+    returncode, _, stderr = await ops_test.run(
+        *f"juju-lint -d {tmp_path} -c {rules_file}".split()
+    )
+
+    assert (
+        f"[{local_cloud}] Linting model information for {socket.getfqdn()}, "
+        f"controller {ops_test.controller_name}, model {ops_test.model_name}" in stderr
+    )
+    assert returncode == 0
+    assert all_data_yaml.exists() and cloudstate_yaml.exists()
+
+
+@pytest.mark.parametrize(
+    "bad_output_folder, expected_error",
+    [
+        ("non_existent_directory", "No such file or directory"),
+        ("non_writable_directory", "Permission denied"),
+    ],
+)
+@pytest.mark.cloud
+async def test_bad_output_folder_error(
+    ops_test, local_cloud, rules_file, bad_output_folder, expected_error, request
+):
+    """Test juju-lint fails gracefully for bad output folder values."""
+    output_folder = request.getfixturevalue(bad_output_folder)
+
+    await ops_test.model.wait_for_idle()
+    returncode, _, stderr = await ops_test.run(
+        *f"juju-lint -d {output_folder} -c {rules_file}".split()
+    )
+    assert returncode != 0
+    assert (
+        f"[{local_cloud}] Linting model information for {socket.getfqdn()}, "
+        f"controller {ops_test.controller_name}, model {ops_test.model_name}"
+        not in stderr
+    )
+    assert expected_error in stderr

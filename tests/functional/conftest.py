@@ -2,7 +2,9 @@
 import logging
 import os
 import shutil
+from pathlib import Path
 from subprocess import check_call, check_output
+from tempfile import TemporaryDirectory
 from textwrap import dedent
 
 import pytest
@@ -127,3 +129,22 @@ def local_cloud():
     if backup:
         logging.info("Restoring backup")
         shutil.move(local_config_dir + ".bak", local_config_dir)
+
+
+@pytest.fixture
+def non_existent_directory():
+    """Return a non-existent directory."""
+    dir = Path("/a/path/that/does/not/exist")
+    assert not dir.exists()
+    return dir
+
+
+@pytest.fixture
+def non_writable_directory():
+    """Return a non-writable directory."""
+    dir = TemporaryDirectory()
+    os.chmod(dir.name, mode=0o555)
+
+    yield dir.name
+
+    dir.cleanup()

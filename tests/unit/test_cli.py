@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Test the CLI."""
+import errno
 from logging import WARN
 from unittest.mock import MagicMock, call
 
@@ -254,7 +255,11 @@ def test_cli_audit_all(cli_instance, mocker):
     clouds = MagicMock()
     clouds.get.return_value = clouds_value
 
-    config_data = {"clouds": clouds}
+    folder_value = ""
+    folder = MagicMock()
+    folder.get.return_value = folder_value
+
+    config_data = {"clouds": clouds, "output": {"folder": folder}}
     config = MagicMock()
     config.__getitem__.side_effect = config_data.__getitem__
 
@@ -336,7 +341,7 @@ def test_cli_write_yaml(cli_instance, mocker):
     opened_file = MagicMock()
     mock_open = mocker.patch("builtins.open", return_value=opened_file)
 
-    config = {"output": {"dump": True, "folder": output_folder}}
+    config = {"output": {"folder": output_folder}}
 
     cli_instance.config = config
     cli_instance.write_yaml(data, file_name)
@@ -345,6 +350,37 @@ def test_cli_write_yaml(cli_instance, mocker):
         "{}/{}".format(output_folder_value, file_name), "w"
     )
     yaml_mock.dump.assert_called_once_with(data, opened_file)
+
+
+def test_check_output_folder(cli_instance, mocker):
+    """Test _check_output_folder() method from Cli class."""
+    folder_value = "/a/non/empty/path/string"
+    folder = MagicMock()
+    folder.get.return_value = folder_value
+
+    config = {"output": {"folder": folder}}
+    cli_instance.config = config
+
+    mock_temporary_file = mocker.patch("tempfile.TemporaryFile")
+    mock_sys_exit = mocker.patch("sys.exit")
+
+    mock_temporary_file.return_value.__enter__.side_effect = FileNotFoundError()
+    cli_instance._check_output_folder()
+    mock_sys_exit.assert_called_once_with(errno.ENOENT)
+
+    mock_temporary_file.reset_mock(return_value=True)
+    mock_sys_exit.reset_mock()
+
+    mock_temporary_file.return_value.__enter__.side_effect = PermissionError()
+    cli_instance._check_output_folder()
+    mock_sys_exit.assert_called_once_with(errno.EACCES)
+
+    mock_temporary_file.reset_mock(return_value=True)
+    mock_sys_exit.reset_mock()
+
+    mock_temporary_file.return_value.__enter__.side_effect = Exception()
+    cli_instance._check_output_folder()
+    mock_sys_exit.assert_called_once_with(1)
 
 
 @pytest.mark.parametrize("audit_type", ["file", "all", None])

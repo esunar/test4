@@ -17,9 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Main entrypoint for the juju-lint CLI."""
+import errno
 import logging
 import os.path
 import sys
+import tempfile
 
 import pkg_resources
 import yaml
@@ -127,6 +129,7 @@ class Cli:
 
     def audit_all(self):
         """Iterate over clouds and run audit."""
+        self._check_output_folder()
         self.logger.debug("Starting audit")
         for cloud_name in self.config["clouds"].get():
             self.audit(cloud_name)
@@ -178,11 +181,27 @@ class Cli:
 
     def write_yaml(self, data, file_name):
         """Write collected information to YAML."""
-        if "dump" in self.config["output"]:
-            if self.config["output"]["dump"]:
-                folder_name = self.config["output"]["folder"].get()
-                file_handle = open("{}/{}".format(folder_name, file_name), "w")
-                yaml.dump(data, file_handle)
+        folder_name = self.config["output"]["folder"].get()
+        if folder_name:
+            file_handle = open("{}/{}".format(folder_name, file_name), "w")
+            yaml.dump(data, file_handle)
+
+    def _check_output_folder(self):
+        """Check the output folder for permission and existence."""
+        outdir = self.config["output"]["folder"].get()
+        if outdir:
+            try:
+                with tempfile.TemporaryFile(dir=outdir):
+                    pass  # pragma: no cover
+            except FileNotFoundError as err:
+                err.filename = outdir
+                Logger.fubar(msg=str(err), exit_code=errno.ENOENT)
+            except PermissionError as err:
+                err.filename = outdir
+                Logger.fubar(msg=str(err), exit_code=errno.EACCES)
+            except Exception as err:
+                err.filename = outdir
+                Logger.fubar(msg=str(err))
 
 
 def main():
