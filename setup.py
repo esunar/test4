@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Setuptools packaging metadata for juju-lint."""
+import warnings
 
 import setuptools
-import warnings
 
 warnings.simplefilter("ignore", UserWarning)  # Older pips complain about newer options.
 

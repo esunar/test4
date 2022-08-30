@@ -787,6 +787,7 @@ applications:
     }
 
     def test_check_spaces_detect_mismatches(self, linter, mocker):
+        """Test that check spaces mismatch gives warning message."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
@@ -805,6 +806,7 @@ applications:
         )
 
     def test_check_spaces_enforce_endpoints(self, linter):
+        """Test that check spaces enforce endpoints."""
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint enforced.
@@ -824,6 +826,7 @@ applications:
         assert len(errors) == 2
 
     def test_check_spaces_enforce_relations(self, linter):
+        """Test that check spaces enforce relations."""
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
         # Run the space check with prometheus:target endpoint enforced.
@@ -845,6 +848,7 @@ applications:
         assert len(errors) == 2
 
     def test_check_spaces_ignore_endpoints(self, linter, mocker):
+        """Test that check spaces can ignore endpoints."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
@@ -867,6 +871,7 @@ applications:
         assert mock_log.call_count == 0
 
     def test_check_spaces_ignore_relations(self, linter, mocker):
+        """Test that check spaces can ignore relations."""
         mock_log: mock.MagicMock = mocker.patch("jujulint.lint.Linter._log_with_header")
         linter.model.app_to_charm = self.check_spaces_example_app_charm_map
 
