@@ -179,7 +179,16 @@ class Linter:
 
     @staticmethod
     def atoi(val):
-        """Deal with complex number representations as strings, returning a number."""
+        """Deal with complex number representations as strings.
+
+        This method attempts to convert string containing number and a
+        supported suffix (k,m,g,K,M,G) into a int with appropriate value.
+        e.g.: "2k" -> 2000
+              "2K" -> 2048
+
+        If the input value does not match the expected format, it is returned
+        without the change.
+        """
         if type(val) != str:
             return val
 
