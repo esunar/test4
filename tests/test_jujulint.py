@@ -1198,6 +1198,7 @@ applications:
         [
             (1, 1),  # return non-strings unchanged
             ("not_number_1", "not_number_1"),  # return non-numbers unchanged
+            ("not_number_g", "not_number_g"), # invalid value with valid suffix
             ("2f", "2f"),  # unrecognized suffix returns value unchanged
             ("2k", 2000),  # convert kilo suffix with quotient 1000
             ("2K", 2048),  # convert Kilo suffix with quotient 1024

@@ -79,20 +79,27 @@ def test_relation_endpoints_prop():
     assert relation.endpoints == [ep_1, ep_2]
 
 
-def test_space_mismatch_init():
-    """Test initiation of SpaceMismatch class."""
-    ep_1 = "B Endpoint"
-    ep_2 = "A Endpoint"
-    space_1 = "B Space"
-    space_2 = "A Space"
+@pytest.mark.parametrize("input_order, output_order", [
+    # Input endpoints are already in alphabetical order, output unchanged
+    (["A EP", "A Space", "Z EP", "Z Space"], ["A EP", "A Space", "Z EP", "Z Space"]),
+    # Input endpoints are not in order, output is alphabetically reordered
+    (["Z EP", "Z Space", "A EP", "A Space"], ["A EP", "A Space", "Z EP", "Z Space"]),
+    # Input endpoints are the same, no reordering occurs on output
+    (["Z EP", "A Space", "Z EP", "Z Space"], ["Z EP", "A Space", "Z EP", "Z Space"]),
+])
+def test_space_mismatch_init(input_order, output_order):
+    """Test initiation of SpaceMismatch class.
 
-    mismatch_instance = check_spaces.SpaceMismatch(ep_1, space_1, ep_2, space_2)
+    This test also verifies that spaces in SpaceMismatch instance are ordered
+    alphabetically based on the endpoint name.
+    """
+    mismatch_instance = check_spaces.SpaceMismatch(*input_order)
 
     # Assert that endpoints are alphabetically reordered
-    assert mismatch_instance.endpoint1 == ep_2
-    assert mismatch_instance.space1 == space_2
-    assert mismatch_instance.endpoint2 == ep_1
-    assert mismatch_instance.space2 == space_1
+    assert mismatch_instance.endpoint1 == output_order[0]
+    assert mismatch_instance.space1 == output_order[1]
+    assert mismatch_instance.endpoint2 == output_order[2]
+    assert mismatch_instance.space2 == output_order[3]
 
 
 def test_space_mismatch_str():
