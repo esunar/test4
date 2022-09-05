@@ -22,11 +22,17 @@ git clone git+ssh://<LAUNCHPAD_USER>@git.launchpad.net/juju-lint
 cd juju-lint/
 ```
 
-You can use the environments created by `tox` for development:
+Create and activate a virtualenv with the development requirements:
 
 ```shell
-tox --notest -e unit
-source .tox/unit/bin/activate
+make dev-environment
+```
+
+This step is mandatory, otherwise a message like this will appear if you try to commit:
+
+```shell
+$ git commit
+`pre-commit` not found.  Did you forget to activate your virtualenv?
 ```
 
 After making your changes you can run the CI without the need of building and installing the snap by using:
@@ -40,9 +46,12 @@ python3 -m jujulint.cli <PATH_TO_YAML> -c <PATH_TO_RULE_FILE> -l debug
 
 ```shell
 make lint            # check code style
-make test            # unit tests
+make reformat        # reformat the code using black and isort
+make unittests       # run unit tests
+make functional      # run functional tests
+make test            # run lint, unittests and functional
 make build           # build the snap
-make clean           # clean the snapcraft lxd containers
+make clean           # clean the snapcraft lxd containers and the snap files created
 ```
 
 ## Canonical Contributor Agreement

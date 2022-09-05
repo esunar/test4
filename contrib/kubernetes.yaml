@@ -4,20 +4,4 @@
 !include includes/operations.yaml
 !include includes/kubernetes.yaml
 !include includes/saas.yaml
-
-operations charms: &operations-charms
- - *operations-kubernetes-mandatory-charms
- - *operations-mandatory-charms
- - *operations-mandatory-deps
- - *operations-mandatory-subs
- - *operations-optional-charms
- - *operations-optional-subs
-
-kubernetes charms: &kubernetes-charms
- - *kubernetes-mandatory-charms
- - *kubernetes-optional-charms
-
-known charms:
- - ubuntu
- - *operations-charms
- - *kubernetes-charms
+!include includes/aggregator-kubernetes.yaml

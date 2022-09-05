@@ -1,5 +1,6 @@
 # Module requirements
 black
+colorama
 flake8<5.0  # some flake8 plugins seem to be currently broken with version 5.0+
 flake8-colors
 flake8-docstrings
@@ -12,3 +13,4 @@ pytest
 pytest-cov
 pytest-html
 pytest-mock
+pre-commit
