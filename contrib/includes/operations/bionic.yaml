@@ -1,2 +1,5 @@
 operations openstack mandatory series: &operations-openstack-mandatory-series
  - prometheus-ceph-exporter
+# compatability with new fields of fcb rules
+operations openstack mandatory release: &operations-openstack-mandatory-release []
+openstack loadbalancer: &openstack-loadbalancer []
