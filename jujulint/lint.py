@@ -1175,7 +1175,9 @@ class Linter:
                 parsed_yaml = self.get_main_bundle_doc(parsed_yaml_docs)
                 if parsed_yaml:
                     return self.do_lint(parsed_yaml)
-        self.logger.fubar("Failed to parse YAML from file {}".format(filename))  # pragma: no cover
+        self.logger.fubar(
+            "Failed to parse YAML from file {}".format(filename)
+        )  # pragma: no cover
 
     def do_lint(self, parsed_yaml):  # pragma: no cover
         """Lint parsed YAML."""

@@ -79,14 +79,26 @@ def test_relation_endpoints_prop():
     assert relation.endpoints == [ep_1, ep_2]
 
 
-@pytest.mark.parametrize("input_order, output_order", [
-    # Input endpoints are already in alphabetical order, output unchanged
-    (["A EP", "A Space", "Z EP", "Z Space"], ["A EP", "A Space", "Z EP", "Z Space"]),
-    # Input endpoints are not in order, output is alphabetically reordered
-    (["Z EP", "Z Space", "A EP", "A Space"], ["A EP", "A Space", "Z EP", "Z Space"]),
-    # Input endpoints are the same, no reordering occurs on output
-    (["Z EP", "A Space", "Z EP", "Z Space"], ["Z EP", "A Space", "Z EP", "Z Space"]),
-])
+@pytest.mark.parametrize(
+    "input_order, output_order",
+    [
+        # Input endpoints are already in alphabetical order, output unchanged
+        (
+            ["A EP", "A Space", "Z EP", "Z Space"],
+            ["A EP", "A Space", "Z EP", "Z Space"],
+        ),
+        # Input endpoints are not in order, output is alphabetically reordered
+        (
+            ["Z EP", "Z Space", "A EP", "A Space"],
+            ["A EP", "A Space", "Z EP", "Z Space"],
+        ),
+        # Input endpoints are the same, no reordering occurs on output
+        (
+            ["Z EP", "A Space", "Z EP", "Z Space"],
+            ["Z EP", "A Space", "Z EP", "Z Space"],
+        ),
+    ],
+)
 def test_space_mismatch_init(input_order, output_order):
     """Test initiation of SpaceMismatch class.
 
