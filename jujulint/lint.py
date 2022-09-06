@@ -40,8 +40,14 @@ from jujulint.model_input import input_handler
 from jujulint.relations import RelationError, RelationsRulesBootStrap
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte", "search")
+VALID_LOG_LEVEL = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+}
 
-# Generic named tuple to represent the binary config operators (eq,neq,gte)
+# Generic named tuple to represent the binary config operators (eq, neq, gte)
 ConfigOperator = collections.namedtuple(
     "ConfigOperator", "name repr check error_template"
 )
@@ -212,7 +218,15 @@ class Linter:
 
         return _int * conv[suffix.lower()]
 
-    def isset(self, name, check_value, rule, config):
+    def isset(
+        self,
+        name,
+        check_value,
+        rule,
+        config,
+        log_level=logging.ERROR,
+        custom_message="",
+    ):
         """Check if value is set per rule constraints."""
         if rule in config:
             if check_value is True:
@@ -225,7 +239,7 @@ class Linter:
                 )
                 return True
             actual_value = config[rule]
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "config-isset-check-false",
                     "tags": ["config", "isset"],
@@ -233,10 +247,12 @@ class Linter:
                     "application": name,
                     "rule": rule,
                     "actual_value": actual_value,
-                    "message": "Application {} has config for {}: {}.".format(
+                    "message": custom_message
+                    or "Application {} has config for {}: {}.".format(
                         name, rule, actual_value
                     ),
-                }
+                },
+                log_level=log_level,
             )
             return False
         elif check_value is False:
@@ -247,19 +263,29 @@ class Linter:
                 )
             )
             return True
-        self.handle_error(
+        self.message_handler(
             {
                 "id": "config-isset-check-true",
                 "tags": ["config", "isset"],
                 "description": "Checks for config condition 'isset' true",
                 "application": name,
                 "rule": rule,
-                "message": "Application {} has no config for {}.".format(name, rule),
-            }
+                "message": custom_message
+                or "Application {} has no config for {}.".format(name, rule),
+            },
+            log_level=log_level,
         )
         return False
 
-    def eq(self, app_name, check_value, config_key, app_config):
+    def eq(
+        self,
+        app_name,
+        check_value,
+        config_key,
+        app_config,
+        log_level=logging.ERROR,
+        custom_message="",
+    ):
         """Check if value matches the provided value or regex, autodetecting regex."""
         operator = ConfigOperator(
             name="eq",
@@ -269,10 +295,24 @@ class Linter:
         )
 
         return self.check_config_generic(
-            operator, app_name, check_value, config_key, app_config
+            operator,
+            app_name,
+            check_value,
+            config_key,
+            app_config,
+            log_level,
+            custom_message,
         )
 
-    def neq(self, app_name, check_value, config_key, app_config):
+    def neq(
+        self,
+        app_name,
+        check_value,
+        config_key,
+        app_config,
+        log_level=logging.ERROR,
+        custom_message="",
+    ):
         """Check if value does not match a the config."""
         operator = ConfigOperator(
             name="neq",
@@ -282,10 +322,24 @@ class Linter:
         )
 
         return self.check_config_generic(
-            operator, app_name, check_value, config_key, app_config
+            operator,
+            app_name,
+            check_value,
+            config_key,
+            app_config,
+            log_level,
+            custom_message,
         )
 
-    def gte(self, app_name, check_value, config_key, app_config):
+    def gte(
+        self,
+        app_name,
+        check_value,
+        config_key,
+        app_config,
+        log_level=logging.ERROR,
+        custom_message="",
+    ):
         """Check if value is greater than or equal to the check value."""
 
         def operator_gte_check(check_value, actual_value):
@@ -302,10 +356,24 @@ class Linter:
         )
 
         return self.check_config_generic(
-            operator, app_name, check_value, config_key, app_config
+            operator,
+            app_name,
+            check_value,
+            config_key,
+            app_config,
+            log_level,
+            custom_message,
         )
 
-    def search(self, app_name, check_value, config_key, app_config):
+    def search(
+        self,
+        app_name,
+        check_value,
+        config_key,
+        app_config,
+        log_level=logging.ERROR,
+        custom_message="",
+    ):
         """Scan through the charm config looking for a match using the regex pattern."""
         if config_key in app_config:
             actual_value = app_config.get(config_key)
@@ -319,7 +387,7 @@ class Linter:
                     )
                 )
                 return True
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "config-search-check",
                     "tags": ["config", "search"],
@@ -328,13 +396,15 @@ class Linter:
                     "rule": config_key,
                     "expected_value": check_value,
                     "actual_value": actual_value,
-                    "message": "Application {} has an invalid config for '{}': regex {} not found at {}".format(
+                    "message": custom_message
+                    or "Application {} has an invalid config for '{}': regex {} not found at {}".format(
                         app_name,
                         config_key,
                         repr(check_value),
                         repr(actual_value),
                     ),
-                }
+                },
+                log_level=log_level,
             )
             return False
 
@@ -349,7 +419,14 @@ class Linter:
         return False
 
     def check_config_generic(
-        self, operator, app_name, check_value, config_key, app_config
+        self,
+        operator,
+        app_name,
+        check_value,
+        config_key,
+        app_config,
+        log_level=logging.ERROR,
+        custom_message="",
     ):
         """Apply the provided config operator to the configuration."""
         # First check if the config key is present
@@ -380,7 +457,7 @@ class Linter:
             )
             return True
         else:
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "config-{}-check".format(operator.name),
                     "tags": ["config", operator.name],
@@ -391,13 +468,15 @@ class Linter:
                     "rule": config_key,
                     "expected_value": check_value,
                     "actual_value": actual_value,
-                    "message": operator.error_template.format(
+                    "message": custom_message
+                    or operator.error_template.format(
                         app_name,
                         config_key,
                         repr(check_value),
                         repr(actual_value),
                     ),
-                }
+                },
+                log_level=log_level,
             )
         return False
 
@@ -428,11 +507,21 @@ class Linter:
                     )
                     continue
 
+            custom_message = rules[rule].pop("custom-message", "")
+            log_level = rules[rule].pop("log-level", "error").lower()
+
             for check_op, check_value in rules[rule].items():
                 # check_op should be the operator name, e.g. (eq, neq, gte, isset)
                 if check_op in VALID_CONFIG_CHECKS:
                     check_method = getattr(self, check_op)
-                    check_method(app_name, check_value, rule, config)
+                    check_method(
+                        app_name,
+                        check_value,
+                        rule,
+                        config,
+                        VALID_LOG_LEVEL.get(log_level, logging.ERROR),
+                        custom_message,
+                    )
                 else:
                     self._log_with_header(
                         "Application {} has unknown check operation for {}: {}.".format(
@@ -635,7 +724,7 @@ class Linter:
         for rule in relations_rules:
             for endpoint, applications in rule.missing_relations.items():
                 if applications:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "missing-relations",
                             "tags": ["relation", "missing"],
@@ -646,7 +735,7 @@ class Linter:
                     )
             if rule.not_exist_error:
                 for relation in rule.not_exist_error:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "relation-exist",
                             "tags": ["relation", "exist"],
@@ -657,7 +746,7 @@ class Linter:
                     )
 
             if rule.missing_machines:
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "missing-machine",
                         "tags": ["missing", "machine"],
@@ -697,7 +786,7 @@ class Linter:
         """Check we recognise the charms which are in the model."""
         for charm in self.model.charms:
             if charm not in self.lint_rules["known charms"]:
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "unrecognised-charm",
                         "tags": ["charm", "unrecognised"],
@@ -710,11 +799,11 @@ class Linter:
         for charm in self.lint_rules["operations mandatory"]:
             error = self.check_charms_ops_mandatory(charm)
             if error:
-                self.handle_error(error)
+                self.message_handler(error)
         if self.cloud_type == "openstack":
             for charm in self.lint_rules["openstack mandatory"]:
                 if charm not in self.model.charms:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "openstack-charm-missing",
                             "tags": [
@@ -731,7 +820,7 @@ class Linter:
                     )
             for charm in self.lint_rules["operations openstack mandatory"]:
                 if charm not in self.model.charms:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "openstack-ops-charm-missing",
                             "tags": [
@@ -752,7 +841,7 @@ class Linter:
         elif self.cloud_type == "kubernetes":
             for charm in self.lint_rules["kubernetes mandatory"]:
                 if charm not in self.model.charms:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "kubernetes-charm-missing",
                             "tags": [
@@ -769,7 +858,7 @@ class Linter:
                     )
             for charm in self.lint_rules["operations kubernetes mandatory"]:
                 if charm not in self.model.charms:
-                    self.handle_error(
+                    self.message_handler(
                         {
                             "id": "kubernetes-ops-charm-missing",
                             "tags": [
@@ -895,7 +984,7 @@ class Linter:
 
         message = "Space binding mismatch: {}".format(mismatch)
         if error:
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "space-binding-mismatch",
                     "tags": ["mismatch", "space", "binding"],
@@ -912,7 +1001,7 @@ class Linter:
         if self.model.missing_subs:
             for sub in self.model.missing_subs:
                 principals = ", ".join(sorted(self.model.missing_subs[sub]))
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "ops-subordinate-missing",
                         "tags": ["missing", "ops", "charm", "mandatory", "subordinate"],
@@ -928,7 +1017,7 @@ class Linter:
         if self.model.extraneous_subs:
             for sub in self.model.extraneous_subs:
                 principals = ", ".join(sorted(self.model.extraneous_subs[sub]))
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "subordinate-extraneous",
                         "tags": ["extraneous", "charm", "subordinate"],
@@ -943,7 +1032,7 @@ class Linter:
         if self.model.duelling_subs:
             for sub in self.model.duelling_subs:
                 machines = ", ".join(sorted(self.model.duelling_subs[sub]))
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "subordinate-duplicate",
                         "tags": ["duplicate", "charm", "subordinate"],
@@ -962,7 +1051,7 @@ class Linter:
                 az_map = ", ".join(
                     ["{}: {}".format(az, az_counter[az]) for az in sorted(az_counter)]
                 )
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "AZ-unbalance",
                         "tags": ["AZ"],
@@ -987,7 +1076,7 @@ class Linter:
                 self.model.app_to_charm[app] = charm_name
                 self.model.charm_to_app.setdefault(charm_name, set()).add(app)
             else:
-                self.handle_error(
+                self.message_handler(
                     {
                         "id": "charm-not-mapped",
                         "tags": ["charm", "mapped", "parsing"],
@@ -1060,7 +1149,7 @@ class Linter:
                 return
 
             status_msg = status.get("message")
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "status-unexpected",
                     "tags": ["status"],
@@ -1162,7 +1251,7 @@ class Linter:
             azs.add(self.model.machines_to_az[machine])
         num_azs = len(azs)
         if num_azs != 3:
-            self.handle_error(
+            self.message_handler(
                 {
                     "id": "AZ-invalid-number",
                     "tags": ["AZ"],
@@ -1306,15 +1395,20 @@ class Linter:
                 "Model contains no applications, skipping.", level=logging.WARN
             )
 
-    def collect(self, error):
+    def collect(self, message):
         """Collect an error and add it to the collector."""
-        self.output_collector["errors"].append(error)
+        self.output_collector["errors"].append(message)
 
-    def handle_error(self, error):
-        """Collect an error and add it to the collector."""
-        self._log_with_header(error["message"], level=logging.ERROR)
-        if self.collect_errors:
-            self.collect(error)
+    def message_handler(self, message, log_level=logging.ERROR):
+        """Handle message from checks and append error messages to the collector."""
+        if "message" not in message:
+            log_level = logging.ERROR
+            message = {"message": "wrong message_handler format"}
+
+        self._log_with_header(message["message"], level=log_level)
+
+        if self.collect_errors and log_level == logging.ERROR:
+            self.collect(message)
 
     def _process_includes_in_rules(self, yaml_txt):
         """

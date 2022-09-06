@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from jujulint import check_spaces, lint, relations
+from jujulint.lint import VALID_LOG_LEVEL
 
 
 class TestUtils:
@@ -536,22 +537,79 @@ applications:
         assert errors[0]["id"] == "kubernetes-ops-charm-missing"
         assert errors[0]["charm"] == "ntp"
 
-    def test_config_eq(self, linter, juju_status):
-        """Test the config condition 'eq'."""
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_eq(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test the config condition 'eq' with custom messages and log levels."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"eq": False}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-eq-check"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] is False
-        assert errors[0]["actual_value"] is True
 
-    def test_config_eq_suffix_match(self, linter, juju_status):
-        """Test the config condition 'eq'. when suffix matches."""
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-eq-check"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] is False
+            assert errors[0]["actual_value"] is True
+
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_eq_suffix_match(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test the config condition 'eq'. when suffix matches with custom messages and log levels."""
         linter.lint_rules["config"] = {
             "ubuntu": {"fake-opt": {"eq": False, "suffixes": ["host", "physical"]}}
         }
@@ -559,31 +617,86 @@ applications:
         juju_status["applications"]["ubuntu-host"] = juju_status["applications"].pop(
             "ubuntu"
         )
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-eq-check"
-        assert errors[0]["application"] == "ubuntu-host"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] is False
-        assert errors[0]["actual_value"] is True
 
-    def test_config_eq_suffix_match_charm_name(self, linter, juju_status):
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-eq-check"
+            assert errors[0]["application"] == "ubuntu-host"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] is False
+            assert errors[0]["actual_value"] is True
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
+
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_eq_suffix_match_charm_name(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
         """Test the config condition 'eq'. when suffix and base charm name."""
         linter.lint_rules["config"] = {
             "ubuntu": {"fake-opt": {"eq": False, "suffixes": ["host", "physical"]}}
         }
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-eq-check"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] is False
-        assert errors[0]["actual_value"] is True
+
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-eq-check"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] is False
+            assert errors[0]["actual_value"] is True
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
 
     def test_config_eq_suffix_skip(self, linter, juju_status):
         """Test the config condition 'eq'. when suffix doesn't match."""
@@ -599,22 +712,61 @@ applications:
         errors = linter.output_collector["errors"]
         assert not errors
 
-    def test_config_eq_no_suffix_check_all(self, linter, juju_status):
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_eq_no_suffix_check_all(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
         """Test the config condition 'eq'. when no suffix all should be checked."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"eq": False}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": True}
         juju_status["applications"]["ubuntu-host"] = juju_status["applications"].pop(
             "ubuntu"
         )
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-eq-check"
-        assert errors[0]["application"] == "ubuntu-host"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] is False
-        assert errors[0]["actual_value"] is True
+
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-eq-check"
+            assert errors[0]["application"] == "ubuntu-host"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] is False
+            assert errors[0]["actual_value"] is True
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
 
     def test_config_neq_valid(self, linter, juju_status):
         """Test the config condition 'neq'."""
@@ -625,46 +777,164 @@ applications:
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
 
-    def test_config_neq_invalid(self, linter, juju_status):
-        """Test the config condition 'neq', valid."""
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_neq_invalid(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test the config condition 'neq', invalid with custom messages and log levels."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"neq": ""}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": ""}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-neq-check"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] == ""
-        assert errors[0]["actual_value"] == ""
 
-    def test_config_gte(self, linter, juju_status):
-        """Test the config condition 'gte'."""
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-neq-check"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] == ""
+            assert errors[0]["actual_value"] == ""
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
+
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_gte(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test the config condition 'gte' with custom messages and log levels."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"gte": 3}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": 0}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-gte-check"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["expected_value"] == 3
-        assert errors[0]["actual_value"] == 0
 
-    def test_config_isset_false_fail(self, linter, juju_status):
-        """Test error handling if config condition 'isset'=false is not met."""
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert generate_error
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-gte-check"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] == 3
+            assert errors[0]["actual_value"] == 0
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
+
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_isset_false_fail(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test message handling if config condition 'isset'=false is not met."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": False}}}
         juju_status["applications"]["ubuntu"]["options"] = {"fake-opt": 0}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-isset-check-false"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
-        assert errors[0]["actual_value"] == 0
+
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-isset-check-false"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["actual_value"] == 0
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
 
     def test_config_isset_false_pass(self, linter, juju_status):
         """Test handling if config condition 'isset'=false is met."""
@@ -675,17 +945,56 @@ applications:
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
 
-    def test_config_isset_true_fail(self, linter, juju_status):
-        """Test error handling if config condition 'isset'=true is not met."""
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_isset_true_fail(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
+        """Test message handling if config condition 'isset'=true is not met."""
         linter.lint_rules["config"] = {"ubuntu": {"fake-opt": {"isset": True}}}
         juju_status["applications"]["ubuntu"]["options"] = {}
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-isset-check-true"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake-opt"
+
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-isset-check-true"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            if custom_message:
+                assert errors[0]["message"] == custom_message
+            else:
+                assert errors[0]["message"] != custom_message
 
     def test_config_isset_true_pass(self, linter, juju_status):
         """Test handling if config condition 'isset'=true is met."""
@@ -709,23 +1018,60 @@ applications:
         errors = linter.output_collector["errors"]
         assert len(errors) == 0
 
-    def test_config_search_invalid(self, linter, juju_status):
+    @pytest.mark.parametrize(
+        "custom_message, log_level, generate_error",
+        [
+            ("", "", True),  # generate error, no custom message
+            ("custom message", "", True),  # generate error with custom message
+            ("", "foo", True),  # generate error, no custom message
+            (
+                "custom message",
+                "warning",
+                False,
+            ),  # doesn't generate error with custom message
+            (
+                "custom message",
+                "WARNING",
+                False,
+            ),  # doesn't generate error with custom message
+            ("", "info", False),  # doesn't generate error, no custom message
+            ("", "debug", False),  # doesn't generate error, no custom message
+        ],
+    )
+    def test_config_search_invalid(
+        self, linter, juju_status, custom_message, log_level, generate_error
+    ):
         """Test the config condition 'search' when invalid."""
         linter.lint_rules["config"] = {
-            "ubuntu": {"fake_opt": {"search": "\\W\\*, \\W\\*, 25000, 27500"}}
+            "ubuntu": {"fake-opt": {"search": "\\W\\*, \\W\\*, 25000, 27500"}}
         }
         juju_status["applications"]["ubuntu"]["options"] = {
-            "fake_opt": "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+            "fake-opt": "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
         }
+        if custom_message:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"][
+                "custom-message"
+            ] = custom_message
+        if log_level:
+            linter.lint_rules["config"]["ubuntu"]["fake-opt"]["log-level"] = log_level
+
         linter.do_lint(juju_status)
 
         errors = linter.output_collector["errors"]
-        assert len(errors) == 1
-        assert errors[0]["id"] == "config-search-check"
-        assert errors[0]["application"] == "ubuntu"
-        assert errors[0]["rule"] == "fake_opt"
-        assert errors[0]["expected_value"] == "\\W\\*, \\W\\*, 25000, 27500"
-        assert errors[0]["actual_value"] == "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+
+        if log_level.lower() != "error" and log_level.lower() in VALID_LOG_LEVEL:
+            assert not generate_error
+            assert len(errors) == 0
+
+        else:
+            assert len(errors) == 1
+            assert errors[0]["id"] == "config-search-check"
+            assert errors[0]["application"] == "ubuntu"
+            assert errors[0]["rule"] == "fake-opt"
+            assert errors[0]["expected_value"] == "\\W\\*, \\W\\*, 25000, 27500"
+            assert (
+                errors[0]["actual_value"] == "[[/, queue1, 10, 20], [\\*, \\*, 10, 20]]"
+            )
 
     def test_config_search_missing(self, linter, mocker):
         """Test the config search method logs warning if the config option is missing."""
@@ -1245,12 +1591,12 @@ applications:
     @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
     def test_check_relations(self, linter, input_files, mocker, input_file_type):
         """Ensure that check_relation pass."""
-        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        mock_message_handler = mocker.patch("jujulint.lint.Linter.message_handler")
         linter.lint_rules["relations"] = [
             {"charm": "nrpe", "check": [["nrpe:juju-info", "ubuntu:juju-info"]]}
         ]
         linter.check_relations(input_files[input_file_type])
-        mock_handle_error.assert_not_called()
+        mock_message_handler.assert_not_called()
 
     @pytest.mark.parametrize(
         "input_file_type",
@@ -1260,11 +1606,11 @@ applications:
         ],
     )
     def test_check_relations_exception_handling(
-        self, linter, juju_status, mocker, input_file_type, input_files
+        self, linter, mocker, input_file_type, input_files
     ):
         """Ensure that handle error if relation rules are in wrong format."""
         mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
-        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        mock_message_handler = mocker.patch("jujulint.lint.Linter.message_handler")
         linter.lint_rules["relations"] = [
             {"charm": "ntp", "check": [["ntp", "ubuntu"]]}
         ]
@@ -1275,17 +1621,17 @@ applications:
         expected_exception = relations.RelationError(expected_msg)
 
         linter.check_relations(input_files[input_file_type])
-        mock_handle_error.assert_not_called()
+        mock_message_handler.assert_not_called()
         mock_log.assert_has_calls(
             [mocker.call(expected_exception.message, level=logging.ERROR)]
         )
 
     @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
     def test_check_relations_missing_relations(
-        self, linter, juju_status, mocker, input_file_type, input_files
+        self, linter, mocker, input_file_type, input_files
     ):
         """Ensure that check_relation handle missing relations."""
-        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        mock_message_handler = mocker.patch("jujulint.lint.Linter.message_handler")
         # add a relation rule that doesn't happen in the model
         linter.lint_rules["relations"] = [
             {
@@ -1294,7 +1640,7 @@ applications:
             }
         ]
         linter.check_relations(input_files[input_file_type])
-        mock_handle_error.assert_called_with(
+        mock_message_handler.assert_called_with(
             {
                 "id": "missing-relations",
                 "tags": ["relation", "missing"],
@@ -1307,7 +1653,7 @@ applications:
     @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
     def test_check_relations_exist(self, linter, input_files, mocker, input_file_type):
         """Ensure that check_relation handle not exist error."""
-        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        mock_message_handler = mocker.patch("jujulint.lint.Linter.message_handler")
         not_exist_relation = [
             "nrpe-host:nrpe-external-master",
             "elasticsearch:nrpe-external-master",
@@ -1317,7 +1663,7 @@ applications:
             {"charm": "nrpe", "not-exist": [not_exist_relation]}
         ]
         linter.check_relations(input_files[input_file_type])
-        mock_handle_error.assert_called_with(
+        mock_message_handler.assert_called_with(
             {
                 "id": "relation-exist",
                 "tags": ["relation", "exist"],
@@ -1338,7 +1684,7 @@ applications:
         input_file.machines_data.update(new_machines)
         # map file again
         input_file.map_file()
-        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        mock_message_handler = mocker.patch("jujulint.lint.Linter.message_handler")
         linter.lint_rules["relations"] = [
             {
                 "charm": "nrpe",
@@ -1348,7 +1694,7 @@ applications:
 
         expected_missing_machines = ["2", "3"]
         linter.check_relations(input_file)
-        mock_handle_error.assert_called_with(
+        mock_message_handler.assert_called_with(
             {
                 "id": "missing-machine",
                 "tags": ["missing", "machine"],
@@ -1358,3 +1704,44 @@ applications:
                 ),
             }
         )
+
+    def test_path_mtu_for_ovs_ovn_rules(self, linter, rules_files):
+        """Test that ovs and ovn rules set right value of path-mtu."""
+        for rule in [rules_file for rules_file in rules_files if "fcb" in rules_file]:
+            linter.filename = rule
+            linter.read_rules()
+            path_mtu = linter.lint_rules["openstack config"]["neutron-api"]["path-mtu"]
+            if "ovs" in rule:
+                assert path_mtu["gte"] == 1550
+            else:
+                assert path_mtu["gte"] == 1558
+
+            assert path_mtu["log-level"] == "warning"
+            assert path_mtu["custom-message"]
+
+    @pytest.mark.parametrize(
+        "message, log_level, error",
+        [
+            ({}, None, True),  # log wrong message_handler format as error message
+            ({}, logging.INFO, True),  # log wrong message_handler format as error
+            ({"message": "my message"}, None, True),  # log error message
+            ({"message": "my message"}, logging.INFO, False),  # log info message
+            ({"message": "my message"}, logging.DEBUG, False),  # log debug message
+            ({"message": "my message"}, logging.WARNING, False),  # log warning message
+            ({"message": "my message"}, logging.ERROR, True),  # log error message
+        ],
+    )
+    def test_message_handler(self, linter, mocker, message, log_level, error):
+        """Test message_handler method."""
+        logger_mock = mocker.patch.object(linter, "_log_with_header")
+        expected_message = message.get("message", "wrong message_handler format")
+        if message and not error:
+            linter.message_handler(message, log_level)
+            logger_mock.assert_has_calls(
+                [mocker.call(expected_message, level=log_level)]
+            )
+        else:
+            linter.message_handler(message)
+            logger_mock.assert_has_calls(
+                [mocker.call(expected_message, level=logging.ERROR)]
+            )
