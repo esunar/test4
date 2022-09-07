@@ -37,7 +37,7 @@ async def test_audit_local_cloud(ops_test, local_cloud, rules_file):
     """Test running juju-lint against a live local cloud."""
     await ops_test.model.deploy("ubuntu")
     await ops_test.model.wait_for_idle()
-    returncode, stdout, stderr = await ops_test.run(*f"juju-lint -t {local_cloud} -c {rules_file}".split())
+    returncode, stdout, stderr = await ops_test.run(*f"juju-lint -c {rules_file}".split())
     assert f"[{local_cloud}] Linting model information for {socket.getfqdn()}, "\
         f"controller {ops_test.controller_name}, model {ops_test.model_name}" in stderr
     assert returncode == 0
