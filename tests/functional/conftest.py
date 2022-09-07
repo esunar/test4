@@ -77,7 +77,7 @@ def manual_file():
     """Return the bundle file for testing."""
     return os.path.join(
         os.path.dirname(__file__),
-        "resources/fcb-yoga-focal-bundle.yaml"
+        "../resources/fcb-yoga-focal-bundle.yaml"
     )
 
 
