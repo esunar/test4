@@ -28,7 +28,9 @@ def test_load_default_rules_file(lint_rules_yaml, manual_file):
 def test_json_output(rules_file, manual_file):
     """Test json output."""
     assert json.loads(
-        check_output(f"juju-lint --format json -c {rules_file} {manual_file}".split()).decode()
+        check_output(
+            f"juju-lint --format json -c {rules_file} {manual_file}".split()
+        ).decode()
     )
 
 
@@ -37,7 +39,11 @@ async def test_audit_local_cloud(ops_test, local_cloud, rules_file):
     """Test running juju-lint against a live local cloud."""
     await ops_test.model.deploy("ubuntu")
     await ops_test.model.wait_for_idle()
-    returncode, stdout, stderr = await ops_test.run(*f"juju-lint -c {rules_file}".split())
-    assert f"[{local_cloud}] Linting model information for {socket.getfqdn()}, "\
+    returncode, stdout, stderr = await ops_test.run(
+        *f"juju-lint -c {rules_file}".split()
+    )
+    assert (
+        f"[{local_cloud}] Linting model information for {socket.getfqdn()}, "
         f"controller {ops_test.controller_name}, model {ops_test.model_name}" in stderr
+    )
     assert returncode == 0

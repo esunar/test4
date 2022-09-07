@@ -1,23 +1,17 @@
 """Pytest configuration file for juju-lint tests."""
+import logging
 import os
 import shutil
 from subprocess import check_call, check_output
 from textwrap import dedent
-import logging
 
 import pytest
 
 
 def pytest_configure(config):
     """Pytest configuration."""
-    config.addinivalue_line(
-        "markers",
-        "smoke: mark test as a smoke test"
-    )
-    config.addinivalue_line(
-        "markers",
-        "cloud: mark test as a cloud test"
-    )
+    config.addinivalue_line("markers", "smoke: mark test as a smoke test")
+    config.addinivalue_line("markers", "cloud: mark test as a cloud test")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -31,15 +25,23 @@ def install_package():
     if jujulint_test_snap:
         logging.info(f"Installing {jujulint_test_snap}")
         assert os.path.isfile(jujulint_test_snap)
-        assert check_call(f"sudo snap install --dangerous --classic {jujulint_test_snap}".split()) == 0
+        assert (
+            check_call(
+                f"sudo snap install --dangerous --classic {jujulint_test_snap}".split()
+            )
+            == 0  # noqa
+        )
         assert check_output("which juju-lint".split()).decode().strip() == os.path.join(
             "/snap/bin/juju-lint"
         )
     else:
         logging.warning("Installing python package")
         assert check_call("python3 -m pip install .".split()) == 0
-        assert check_output("which juju-lint".split()).decode().strip().startswith(
-            os.path.join(os.getcwd(), ".tox")
+        assert (
+            check_output("which juju-lint".split())
+            .decode()
+            .strip()
+            .startswith(os.path.join(os.getcwd(), ".tox"))
         )
 
     yield jujulint_test_snap
@@ -76,25 +78,18 @@ def rules_file(basedir):
 def manual_file():
     """Return the bundle file for testing."""
     return os.path.join(
-        os.path.dirname(__file__),
-        "../resources/fcb-yoga-focal-bundle.yaml"
+        os.path.dirname(__file__), "../resources/fcb-yoga-focal-bundle.yaml"
     )
 
 
 @pytest.fixture
 def lint_rules_yaml(basedir, rules_file):
     """Return the default lint-rules.yaml file and cleanup."""
-    lint_rules_yaml_file = os.path.join(
-        os.getcwd(),
-        "lint-rules.yaml"
-    )
+    lint_rules_yaml_file = os.path.join(os.getcwd(), "lint-rules.yaml")
     shutil.copy(rules_file, lint_rules_yaml_file)
 
     includes_dir = os.path.join(os.getcwd(), "includes")
-    os.symlink(
-        os.path.join(basedir, "contrib/includes"),
-        includes_dir
-    )
+    os.symlink(os.path.join(basedir, "contrib/includes"), includes_dir)
 
     yield lint_rules_yaml_file
 
@@ -111,16 +106,11 @@ def local_cloud():
     """
     local_cloud_name = "test"
     backup = False
-    local_config_dir = os.path.join(
-        os.path.expanduser("~"), ".config/juju-lint"
-    )
+    local_config_dir = os.path.join(os.path.expanduser("~"), ".config/juju-lint")
     local_config_file = os.path.join(local_config_dir, "config.yaml")
     if os.path.isdir(local_config_dir):
         logging.info("Backing up existing config directory")
-        shutil.move(
-            local_config_dir,
-            local_config_dir + ".bak"
-        )
+        shutil.move(local_config_dir, local_config_dir + ".bak")
         backup = True
     os.makedirs(local_config_dir)
     with open(local_config_file, "w") as config_yaml:
@@ -136,7 +126,4 @@ def local_cloud():
     shutil.rmtree(local_config_dir)
     if backup:
         logging.info("Restoring backup")
-        shutil.move(
-            local_config_dir + ".bak",
-            local_config_dir
-        )
+        shutil.move(local_config_dir + ".bak", local_config_dir)
