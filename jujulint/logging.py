@@ -49,27 +49,23 @@ class Logger:
             console.setFormatter(colour_formatter)
             self.logger.addHandler(console)
             if logfile:
-                try:
-                    file_logger = colorlog.getLogger("file")
-                    plain_formatter = logging.Formatter(
-                        format_string, datefmt=date_format
-                    )
-                    # If we send output to the file logger specifically, don't propagate it
-                    # to the root logger as well to avoid duplicate output. So if we want
-                    # to only send logging output to the file, you would do this:
-                    #  logging.getLogger('file').info("message for logfile only")
-                    # rather than this:
-                    #  logging.info("message for console and logfile")
-                    file_logger.propagate = False
+                file_logger = colorlog.getLogger("file")
+                plain_formatter = logging.Formatter(format_string, datefmt=date_format)
+                # If we send output to the file logger specifically, don't propagate it
+                # to the root logger as well to avoid duplicate output. So if we want
+                # to only send logging output to the file, you would do this:
+                #  logging.getLogger('file').info("message for logfile only")
+                # rather than this:
+                #  logging.info("message for console and logfile")
+                file_logger.propagate = False
 
-                    file_handler = logging.FileHandler(logfile)
-                    file_handler.setFormatter(plain_formatter)
-                    self.logger.addHandler(file_handler)
-                    file_logger.addHandler(file_handler)
-                except IOError:
-                    logging.error("Unable to write to logfile: {}".format(logfile))
+                file_handler = logging.FileHandler(logfile)
+                file_handler.setFormatter(plain_formatter)
+                self.logger.addHandler(file_handler)
+                file_logger.addHandler(file_handler)
 
-    def fubar(self, msg, exit_code=1):
+    @staticmethod
+    def fubar(msg, exit_code=1):
         """Exit and print to stderr because everything is FUBAR."""
         sys.stderr.write("E: %s\n" % (msg))
         sys.exit(exit_code)

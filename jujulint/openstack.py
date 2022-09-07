@@ -42,7 +42,7 @@ from jujulint.cloud import Cloud
 
 
 class OpenStack(Cloud):
-    """Helper class for interacting with Nagios via the livestatus socket."""
+    """Specialized subclass of Cloud with helpers related to OpenStack."""
 
     def __init__(self, *args, **kwargs):
         """Initialise class-local variables and configuration and pass to super."""
@@ -57,10 +57,6 @@ class OpenStack(Cloud):
 
     def get_neutron_networks(self):
         """Get a list of neutron networks."""
-
-    def refresh(self):
-        """Refresh cloud information."""
-        return super(OpenStack, self).refresh()
 
     def audit(self):
         """Audit OpenStack cloud and run base Cloud audits."""

@@ -177,12 +177,19 @@ class Linter:
 
         return
 
-    def atoi(self, val):
-        """Deal with complex number representations as strings, returning a number."""
-        if type(val) != str:
-            return val
+    @staticmethod
+    def atoi(val):
+        """Deal with complex number representations as strings.
 
-        if type(val[-1]) != str:
+        This method attempts to convert string containing number and a
+        supported suffix (k,m,g,K,M,G) into a int with appropriate value.
+        e.g.: "2k" -> 2000
+              "2K" -> 2048
+
+        If the input value does not match the expected format, it is returned
+        without the change.
+        """
+        if type(val) != str:
             return val
 
         try:
@@ -190,13 +197,17 @@ class Linter:
         except Exception:
             return val
 
+        suffix = val[-1]
         quotient = 1024
-        if val[-1].lower() == val[-1]:
+        if suffix.islower():
             quotient = 1000
 
         conv = {"g": quotient**3, "m": quotient**2, "k": quotient}
 
-        return _int * conv[val[-1].lower()]
+        if suffix.lower() not in conv:
+            return val
+
+        return _int * conv[suffix.lower()]
 
     def isset(self, name, check_value, rule, config):
         """Check if value is set per rule constraints."""
@@ -293,8 +304,8 @@ class Linter:
 
     def search(self, app_name, check_value, config_key, app_config):
         """Scan through the charm config looking for a match using the regex pattern."""
-        actual_value = app_config.get(config_key)
-        if actual_value:
+        if config_key in app_config:
+            actual_value = app_config.get(config_key)
             if re.search(str(check_value), str(actual_value)):
                 self._log_with_header(
                     "Application {} has a valid config for '{}': regex {} found at {}".format(
@@ -450,7 +461,7 @@ class Linter:
 
             if self.cloud_type == "openstack":
                 # process openstack config rules
-                if "openstack config" in self.lint_rules:
+                if "openstack config" in self.lint_rules:  # pragma: no cover
                     if charm_name in self.lint_rules["openstack config"]:
                         lint_rules.extend(
                             self.lint_rules["openstack config"][charm_name].items()
@@ -464,7 +475,7 @@ class Linter:
                         lint_rules,
                     )
 
-    def check_subs(self, machines_data):
+    def check_subs(self, machines_data):  # pragma: no cover
         """Check the subordinates in the model."""
         all_or_nothing = set()
         for machine in self.model.subs_on_machines:
@@ -790,7 +801,7 @@ class Linter:
                 )
             except Exception:
                 # FOR NOW: super quick and dirty
-                print(
+                self.logger.warn(
                     "Exception caught during space check; please check space by hand. {}".format(
                         traceback.format_exc()
                     )
@@ -1034,7 +1045,7 @@ class Linter:
                         data_d["juju-status"],
                         expected=juju_expected,
                     )
-                else:
+                else:  # pragma: no cover
                     self._log_with_header(
                         "Could not determine Juju status for {}.".format(name),
                         level=logging.WARN,
@@ -1055,7 +1066,7 @@ class Linter:
             )
             for container_name in juju_status["machines"][machine_name].get(
                 "container", []
-            ):
+            ):  # pragma: no cover
                 self.check_status_pair(
                     container_name,
                     "container",
@@ -1117,7 +1128,7 @@ class Linter:
             for unit in applications[app_name]["units"]:
                 machine = applications[app_name]["units"][unit]["machine"]
                 machine = machine.split("/")[0]
-                if machine not in self.model.machines_to_az:
+                if machine not in self.model.machines_to_az:  # pragma: no cover
                     self._log_with_header(
                         "{}: Can't find machine {} in machine to AZ mapping data".format(
                             app_name,
@@ -1164,9 +1175,11 @@ class Linter:
                 parsed_yaml = self.get_main_bundle_doc(parsed_yaml_docs)
                 if parsed_yaml:
                     return self.do_lint(parsed_yaml)
-        self.logger.fubar("Failed to parse YAML from file {}".format(filename))
+        self.logger.fubar(
+            "Failed to parse YAML from file {}".format(filename)
+        )  # pragma: no cover
 
-    def do_lint(self, parsed_yaml):
+    def do_lint(self, parsed_yaml):  # pragma: no cover
         """Lint parsed YAML."""
         # Handle Juju 2 vs Juju 1
         applications = "applications"
@@ -1260,7 +1273,7 @@ class Linter:
             if line.startswith("!include"):
                 try:
                     _, rel_path = line.split()
-                except ValueError:
+                except ValueError:  # pragma: no cover
                     self.logger.warn(
                         "invalid include in rules, ignored: '{}'".format(line)
                     )

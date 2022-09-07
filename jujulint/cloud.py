@@ -61,10 +61,9 @@ class Cloud:
         # instance variables
         self.cloud_state = {}
         self.access_method = "local"
-        self.ssh_host = ""
         self.sudo_user = ""
         self.hostname = ""
-        self.name = ""
+        self.name = name
         self.fabric_config = {}
         self.lint_rules = lint_rules
         self.lint_overrides = lint_overrides
@@ -86,7 +85,6 @@ class Cloud:
                 self.access_method = "ssh"
         elif access_method == "local":
             self.hostname = socket.getfqdn()
-        self.name = name
 
     def run_command(self, command):
         """Run a command via fabric on the local or remote host."""
@@ -126,7 +124,8 @@ class Cloud:
     def run_unit_command(self, target, command):
         """Run a command on a Juju unit and return the output."""
 
-    def parse_yaml(self, yaml_string):
+    @staticmethod
+    def parse_yaml(yaml_string):
         """Parse YAML using PyYAML."""
         data = yaml.safe_load_all(yaml_string)
         return list(data)

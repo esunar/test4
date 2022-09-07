@@ -23,9 +23,7 @@ class Relation:
         While Juju does define separate provider and requirer roles, we'll ignore
         those here.
         """
-        return set([self.endpoint1, self.endpoint2]) == set(
-            [other.endpoint1, other.endpoint2]
-        )
+        return {self.endpoint1, self.endpoint2} == {other.endpoint1, other.endpoint2}
 
     @property
     def endpoints(self):

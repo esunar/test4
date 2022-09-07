@@ -38,28 +38,18 @@ Todo:
 from jujulint.cloud import Cloud
 
 
-class OpenStack(Cloud):
-    """Helper class for interacting with Nagios via the livestatus socket."""
+class Kubernetes(Cloud):
+    """Specialized subclass of Cloud with helpers related to Kubernetes."""
 
     def __init__(self, *args, **kwargs):
         """Initialise class-local variables and configuration and pass to super."""
-        super(OpenStack, self).__init__(*args, **kwargs)
-
-    def get_neutron_ports(self):
-        """Get a list of neutron ports."""
-
-    def get_neutron_routers(self):
-        """Get a list of neutron routers."""
-
-    def get_neutron_networks(self):
-        """Get a list of neutron networks."""
-
-    def refresh(self):
-        """Refresh cloud information."""
-        return super(OpenStack, self).refresh()
+        super(Kubernetes, self).__init__(*args, **kwargs)
+        self.cloud_type = "kubernetes"
 
     def audit(self):
         """Audit OpenStack cloud and run base Cloud audits."""
-        # add specific OpenStack checks here
-        self.logger.debug("Running OpenStack-specific audit steps.")
-        super(OpenStack, self).audit()
+        # add specific Kubernetes checks here
+        self.logger.info(
+            "[{}] Running Kubernetes-specific audit steps.".format(self.name)
+        )
+        super(Kubernetes, self).audit()
