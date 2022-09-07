@@ -38,8 +38,8 @@ def install_package():
     else:
         logging.warning("Installing python package")
         assert check_call("python3 -m pip install .".split()) == 0
-        assert check_output("which juju-lint".split()).decode().strip() == os.path.join(
-            os.getcwd(), ".tox/func/bin/juju-lint"
+        assert check_output("which juju-lint".split()).decode().strip().startswith(
+            os.path.join(os.getcwd(), ".tox")
         )
 
     yield jujulint_test_snap
@@ -63,19 +63,19 @@ def basedir():
         basedir = "/snap/juju-lint/current/"
     else:
         basedir = os.getcwd()
-    yield basedir
+    return basedir
 
 
 @pytest.fixture
 def rules_file(basedir):
     """Return the rules file for testing."""
-    yield os.path.join(basedir, "contrib/fcb-yoga-focal.yaml")
+    return os.path.join(basedir, "contrib/fcb-yoga-focal.yaml")
 
 
 @pytest.fixture
 def manual_file():
     """Return the bundle file for testing."""
-    yield os.path.join(
+    return os.path.join(
         os.path.dirname(__file__),
         "resources/fcb-yoga-focal-bundle.yaml"
     )
@@ -95,7 +95,9 @@ def lint_rules_yaml(basedir, rules_file):
         os.path.join(basedir, "contrib/includes"),
         includes_dir
     )
+
     yield lint_rules_yaml_file
+
     os.unlink(lint_rules_yaml_file)
     os.unlink(includes_dir)
 
