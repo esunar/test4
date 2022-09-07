@@ -1,3 +1,7 @@
+PROJECTPATH=$(dir $(realpath ${MAKEFILE_LIST}))
+SNAP_NAME=$(shell cat ${PROJECTPATH}/snap/snapcraft.yaml | grep -E '^name:' | awk '{print $$2}')
+SNAP_FILE=${PROJECTPATH}/${SNAP_NAME}.snap
+
 help:
 	@echo "This project supports the following targets"
 	@echo ""
@@ -31,6 +35,7 @@ reformat:
 build:
 	@echo "Building the snap"
 	@snapcraft --use-lxd
+	@bash -c ./rename.sh
 
 clean:
 	@echo "Cleaning snap"
@@ -46,7 +51,7 @@ dev-environment:
 
 functional: build
 	@echo "Executing functional tests using built snap"
-	@JUJULINT_TEST_SNAP=${JUJULINT_TEST_SNAP} tox -e func -- ${FUNC_ARGS}
+	@JUJULINT_TEST_SNAP=${SNAP_FILE} tox -e func -- ${FUNC_ARGS}
 
 pre-commit:
 	@tox -e pre-commit
