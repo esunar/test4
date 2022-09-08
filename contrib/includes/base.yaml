@@ -43,3 +43,10 @@ subordinates:
   where: all
  local-users:
   where: all or nothing
+
+# openstack and k8s should check nrpe relations. See LP#1965762
+relations base check: &relations-base-check
+  - charm: nrpe
+    check: [
+      ["*:nrpe-external-master", "nrpe:nrpe-external-master"]
+    ]

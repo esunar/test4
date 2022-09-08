@@ -22,3 +22,13 @@ kubernetes optional charms: &kubernetes-optional-charms
  - kubernetes-dashboard
  - openstack-integrator
  - vsphere-integrator
+
+# See LP#1975548
+kubernetes relation checks: &kubernetes-relation-checks
+  - charm: openstack-integrator
+    check: [
+      ["kubernetes-control-plane:loadbalancer", "openstack-integrator:loadbalancer"]
+    ]
+    not-exist: [
+      ["kubernetes-control-plane:kube-api-endpoint", "kubernetes-worker:kube-api-endpoint"]
+    ]
