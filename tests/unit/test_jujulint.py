@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
+import yaml
 
 from jujulint import check_spaces, lint
 
@@ -873,6 +874,26 @@ applications:
         result = linter.read_rules()
         assert linter.lint_rules == {"key": "value"}
         assert result
+
+    def test_snap_rules_files(self, rules_files, linter):
+        """Ensure that all standard rules in the snap is loading correctly."""
+        for rule_file in rules_files:
+            try:
+                linter.filename = rule_file
+                linter.read_rules()
+            except yaml.YAMLError:
+                pytest.fail(f"File: {rule_file} not loading")
+
+    def test_wrong_rule_file_raise_error(self, rules_files, linter, mocker):
+        """Test that bad formatted rules raise YAMLError."""
+        rules_file = rules_files[0]
+        linter.filename = rules_file
+        mocker.patch(
+            "jujulint.lint.Linter._process_includes_in_rules",
+            side_effect=yaml.YAMLError,
+        )
+        with pytest.raises(yaml.YAMLError):
+            linter.read_rules()
 
     def test_read_rules_include(self, linter, tmp_path):
         """Test that rules YAML with an include is imported as expected."""

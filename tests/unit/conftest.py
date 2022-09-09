@@ -10,6 +10,7 @@
 
 import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import mock
@@ -220,3 +221,11 @@ def patch_cloud_init(mocker):
     mocker.patch.object(cloud, "Logger")
     mocker.patch.object(cloud, "Connection")
     mocker.patch.object(cloud.socket, "getfqdn", return_value="localhost")
+
+
+@pytest.fixture
+def rules_files():
+    """Get all standard rules files that comes with the snap."""
+    return [
+        str(rule.resolve()) for rule in Path("./contrib").iterdir() if rule.is_file()
+    ]
