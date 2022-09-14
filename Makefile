@@ -45,9 +45,7 @@ clean:
 
 dev-environment:
 	@echo "Creating virtualenv and installing pre-commit"
-	@virtualenv -p python3 .venv
-	@.venv/bin/pip install -r tests/requirements.txt
-	@.venv/bin/pre-commit install
+	@tox -r -e dev-environment
 
 functional: build
 	@echo "Executing functional tests using built snap"
