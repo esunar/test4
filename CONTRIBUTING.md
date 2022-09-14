@@ -55,9 +55,9 @@ make clean           # clean the snapcraft lxd containers and the snap files cre
 ```
 ### Functional Tests
 
-`make functional` will build the snap, rename it, install it locally and run the tests against the installed snap package. Since this action involves installing a snap package, passwordless `sudo` privileges are needed.  
+`make functional` will build the snap, rename it, install it locally and run the tests against the installed snap package. Since this action involves installing a snap package, passwordless `sudo` privileges are needed.
 However for development purposes, the testing infrastructure also allows for installing `juju-lint` as a python package to a tox environment
-and running tests against it.  
+and running tests against it.
 In order to invoke:
 - development smoke suite, which deselects tests running against a live lxd cloud
   - `$ tox -e func-smoke`
