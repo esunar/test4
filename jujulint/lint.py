@@ -36,6 +36,7 @@ from dateutil import relativedelta
 import jujulint.util as utils
 from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
+from jujulint.relations import RelationError, RelationsRulesBootStrap
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte", "search")
 
@@ -67,6 +68,7 @@ class ModelInfo(object):
     charms = attrib(default=attr.Factory(set))
     cmr_apps = attrib(default=attr.Factory(set))
     app_to_charm = attrib(default=attr.Factory(dict))
+    charm_to_app = attrib(default=attr.Factory(dict))
     subs_on_machines = attrib(default=attr.Factory(dict))
     apps_on_machines = attrib(default=attr.Factory(dict))
     machines_to_az = attrib(default=attr.Factory(dict))
@@ -611,6 +613,49 @@ class Linter:
             if not self.model.extraneous_subs[sub]:
                 del self.model.extraneous_subs[sub]
 
+    def check_relations(self, applications):
+        """Check the relations in the rules file.
+
+        :param applications: applications present in the model
+        :type applications: Dict
+        """
+        if "relations" not in self.lint_rules:
+            self._log_with_header("No relation rules found. Skipping relation checks")
+            return
+        try:
+            relations_rules = RelationsRulesBootStrap(
+                charm_to_app=self.model.charm_to_app,
+                relations_rules=self.lint_rules["relations"],
+                applications=applications,
+            ).check()
+        except RelationError as e:
+            relations_rules = []
+            self._log_with_header(e.message, level=logging.ERROR)
+
+        for rule in relations_rules:
+            for endpoint, applications in rule.missing_relations.items():
+                if applications:
+                    self.handle_error(
+                        {
+                            "id": "missing-relations",
+                            "tags": ["relation", "missing"],
+                            "message": "Endpoint '{}' is missing relations with: {}".format(
+                                endpoint, applications
+                            ),
+                        }
+                    )
+            if rule.not_exist_error:
+                for relation in rule.not_exist_error:
+                    self.handle_error(
+                        {
+                            "id": "relation-exist",
+                            "tags": ["relation", "exist"],
+                            "message": "Relation(s) {} should not exist.".format(
+                                relation
+                            ),
+                        }
+                    )
+
     def check_charms_ops_mandatory(self, charm):
         """
         Check if a mandatory ops charms is present in the model.
@@ -928,6 +973,7 @@ class Linter:
                 charm_name = utils.extract_charm_name(applications[app]["charm"])
                 self.model.charms.add(charm_name)
                 self.model.app_to_charm[app] = charm_name
+                self.model.charm_to_app.setdefault(charm_name, set()).add(app)
             else:
                 self.handle_error(
                     {
@@ -1205,6 +1251,7 @@ class Linter:
                 self.process_subordinates(parsed_yaml[applications][app], app)
 
             self.check_subs(parsed_yaml["machines"])
+            self.check_relations(parsed_yaml[applications])
             self.check_charms()
 
             if "relations" in parsed_yaml:

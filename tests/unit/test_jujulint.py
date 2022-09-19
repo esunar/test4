@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 import yaml
 
-from jujulint import check_spaces, lint
+from jujulint import check_spaces, lint, relations
 
 
 class TestUtils:
@@ -1232,3 +1232,72 @@ applications:
     def test_linter_atoi(self, input_str, expected_int, linter):
         """Test conversion of string values (e.g. 2M (Megabytes)) to integers."""
         assert linter.atoi(input_str) == expected_int
+
+    def test_check_relations_no_rules(self, linter, juju_status, mocker):
+        """Warn message if rule file doesn't pass relations to check."""
+        mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
+        linter.check_relations(juju_status["applications"])
+        mock_log.assert_called_with("No relation rules found. Skipping relation checks")
+
+    def test_check_relations(self, linter, juju_status, mocker):
+        """Ensure that check_relation pass."""
+        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        linter.lint_rules["relations"] = [
+            {"charm": "ntp", "check": [["ntp:juju-info", "ubuntu:juju-info"]]}
+        ]
+        linter.check_relations(juju_status["applications"])
+        mock_handle_error.assert_not_called()
+
+    def test_check_relations_exception_handling(self, linter, juju_status, mocker):
+        """Ensure that handle error if relation rules are in wrong format."""
+        mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
+        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        linter.lint_rules["relations"] = [
+            {"charm": "ntp", "check": [["ntp", "ubuntu"]]}
+        ]
+        expected_msg = (
+            "Relations rules has an unexpected format: not enough "
+            "values to unpack (expected 2, got 1)"
+        )
+        expected_exception = relations.RelationError(expected_msg)
+        linter.check_relations(juju_status["applications"])
+        mock_handle_error.assert_not_called()
+        mock_log.assert_has_calls(
+            [mocker.call(expected_exception.message, level=logging.ERROR)]
+        )
+
+    def test_check_relations_missing_relations(self, linter, juju_status, mocker):
+        """Ensure that check_relation handle missing relations."""
+        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        # add a relation rule that doesn't happen in the model
+        linter.lint_rules["relations"] = [
+            {"charm": "ntp", "check": [["ntp:certificates", "ubuntu:certificates"]]}
+        ]
+        linter.check_relations(juju_status["applications"])
+        mock_handle_error.assert_called_with(
+            {
+                "id": "missing-relations",
+                "tags": ["relation", "missing"],
+                "message": "Endpoint '{}' is missing relations with: {}".format(
+                    "ntp:certificates", ["ubuntu"]
+                ),
+            }
+        )
+
+    def test_check_relations_exist(self, linter, juju_status, mocker):
+        """Ensure that check_relation handle not exist error."""
+        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        # add a relation rule that happen in the model
+        linter.lint_rules["relations"] = [
+            {"charm": "ntp", "not-exist": [["ntp:juju-info", "ubuntu:juju-info"]]}
+        ]
+        linter.check_relations(juju_status["applications"])
+        mock_handle_error.assert_called_with(
+            {
+                "id": "relation-exist",
+                "tags": ["relation", "exist"],
+                "message": "Relation(s) {} should not exist.".format(
+                    ["ntp:juju-info", "ubuntu:juju-info"]
+                ),
+            }
+        )

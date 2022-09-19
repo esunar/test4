@@ -20,3 +20,6 @@ known charms:
   - ubuntu
   - *openstack-charms
   - *operations-charms
+
+relations:
+  - *relations-base-check

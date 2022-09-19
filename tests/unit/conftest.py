@@ -107,6 +107,10 @@ def juju_status():
                 "charm": "cs:ubuntu-18",
                 "charm-name": "ubuntu",
                 "relations": {"juju-info": ["ntp"]},
+                "endpoint-bindings": {
+                    "": "external-space",
+                    "certificates": "external-space",
+                },
                 "units": {
                     "ubuntu/0": {
                         "juju-status": {"current": "idle"},
@@ -126,6 +130,10 @@ def juju_status():
                 "charm": "cs:ntp-47",
                 "charm-name": "ntp",
                 "relations": {"juju-info": ["ubuntu"]},
+                "endpoint-bindings": {
+                    "": "external-space",
+                    "certificates": "external-space",
+                },
             },
         },
         "machines": {
@@ -229,3 +237,84 @@ def rules_files():
     return [
         str(rule.resolve()) for rule in Path("./contrib").iterdir() if rule.is_file()
     ]
+
+
+def juju_status_relation():
+    """Representation of juju status input to test relations checks."""
+    return {
+        "nrpe-container": {
+            "charm": "cs:nrpe-61",
+            "charm-name": "nrpe",
+            "relations": {
+                "monitors": ["nagios"],
+                "nrpe-external-master": [
+                    "keystone",
+                ],
+            },
+            "endpoint-bindings": {
+                "general-info": "",
+                "local-monitors": "",
+                "monitors": "oam-space",
+                "nrpe": "",
+                "nrpe-external-master": "",
+            },
+        },
+        "nrpe-host": {
+            "charm": "cs:nrpe-67",
+            "charm-name": "nrpe",
+            "relations": {
+                "monitors": ["nagios"],
+                "nrpe-external-master": [
+                    "elasticsearch",
+                ],
+            },
+            "endpoint-bindings": {
+                "general-info": "",
+                "local-monitors": "",
+                "monitors": "oam-space",
+                "nrpe": "",
+                "nrpe-external-master": "",
+            },
+        },
+        "keystone": {
+            "charm": "cs:keystone-309",
+            "charm-name": "keystone",
+            "relations": {
+                "nrpe-external-master": ["nrpe-container"],
+            },
+            "endpoint-bindings": {
+                "": "oam-space",
+                "admin": "external-space",
+                "certificates": "oam-space",
+                "cluster": "oam-space",
+                "domain-backend": "oam-space",
+                "ha": "oam-space",
+                "identity-admin": "oam-space",
+                "identity-credentials": "oam-space",
+                "identity-notifications": "oam-space",
+                "identity-service": "oam-space",
+                "internal": "internal-space",
+                "keystone-fid-service-provider": "oam-space",
+                "keystone-middleware": "oam-space",
+                "nrpe-external-master": "oam-space",
+                "public": "external-space",
+                "shared-db": "internal-space",
+                "websso-trusted-dashboard": "oam-space",
+            },
+        },
+        "elasticsearch": {
+            "charm": "cs:elasticsearch-39",
+            "charm-name": "elasticsearch",
+            "relations": {
+                "nrpe-external-master": ["nrpe-host"],
+            },
+            "endpoint-bindings": {
+                "": "oam-space",
+                "client": "oam-space",
+                "data": "oam-space",
+                "logs": "oam-space",
+                "nrpe-external-master": "oam-space",
+                "peer": "oam-space",
+            },
+        },
+    }

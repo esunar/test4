@@ -14,3 +14,7 @@ known charms:
   - ubuntu
   - *operations-charms
   - *kubernetes-charms
+
+relations:
+  - *relations-base-check
+  - *kubernetes-relation-checks
