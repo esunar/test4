@@ -18,7 +18,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Utility library for all helpful functions this project uses."""
 
+import argparse
 import re
+
+from jujulint.logging import Logger
 
 
 class InvalidCharmNameError(Exception):
@@ -82,3 +85,14 @@ def extract_charm_name(charm):
     if not match:
         raise InvalidCharmNameError("charm name '{}' is invalid".format(charm))
     return match.group(1)
+
+
+class DeprecateAction(argparse.Action):  # pragma: no cover
+    """Custom deprecation action to be used with ArgumentParser."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        """Print a deprecation warning and remove the attribute from the namespace."""
+        Logger().warn(
+            "The argument {} is deprecated and will be ignored. ".format(option_string)
+        )
+        delattr(namespace, self.dest)

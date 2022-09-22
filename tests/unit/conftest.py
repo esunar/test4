@@ -239,6 +239,7 @@ def rules_files():
     ]
 
 
+@pytest.fixture
 def juju_status_relation():
     """Representation of juju status input to test relations checks."""
     return {
