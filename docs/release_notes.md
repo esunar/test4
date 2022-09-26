@@ -7,6 +7,21 @@ latest/edge should only be used for development and testing purposes.
 $ snap install juju-lint --channel=latest/stable
 ```
 
+# 1.0.4 (October 2022)
+
+## Summary of the changes
+
+- added new rule to check relations
+- deprecated the usage of --dump-state option, only --output-dir will be enough from now on
+- increased unit test coverage to %100 and added functional test coverage
+
+## Bug Fixes
+
+- [Unclear and inexplicable linting error "found undefined alias 'operations-openstack-mandatory-release'".](https://bugs.launchpad.net/bugs/1990144)
+- [need to check for relation between nrpe and canal (and possibly other subordinates)](https://bugs.launchpad.net/bugs/1965762)
+- [Ensure k8s workers rely on the OpenStack load balancer](https://bugs.launchpad.net/bugs/1975548)
+- [boolean flag --dump-state expects argument](https://bugs.launchpad.net/bugs/1987951)
+
 # 1.0.3 (July 2022)
 
 ## Summary of the changes
