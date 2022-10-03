@@ -36,6 +36,7 @@ from dateutil import relativedelta
 import jujulint.util as utils
 from jujulint.check_spaces import Relation, find_space_mismatches
 from jujulint.logging import Logger
+from jujulint.model_input import input_handler
 from jujulint.relations import RelationError, RelationsRulesBootStrap
 
 VALID_CONFIG_CHECKS = ("isset", "eq", "neq", "gte", "search")
@@ -613,20 +614,19 @@ class Linter:
             if not self.model.extraneous_subs[sub]:
                 del self.model.extraneous_subs[sub]
 
-    def check_relations(self, applications):
+    def check_relations(self, input_file):
         """Check the relations in the rules file.
 
-        :param applications: applications present in the model
-        :type applications: Dict
+        :param input_file: mapped content of the input file.
+        :type input_file: Union[JujuBundleFile, JujuStatusFile]
         """
         if "relations" not in self.lint_rules:
             self._log_with_header("No relation rules found. Skipping relation checks")
             return
         try:
             relations_rules = RelationsRulesBootStrap(
-                charm_to_app=self.model.charm_to_app,
                 relations_rules=self.lint_rules["relations"],
-                applications=applications,
+                input_file=input_file,
             ).check()
         except RelationError as e:
             relations_rules = []
@@ -655,6 +655,18 @@ class Linter:
                             ),
                         }
                     )
+
+            if rule.missing_machines:
+                self.handle_error(
+                    {
+                        "id": "missing-machine",
+                        "tags": ["missing", "machine"],
+                        "message": "Charm '{}' missing on machines: {}".format(
+                            rule.charm,
+                            rule.missing_machines,
+                        ),
+                    }
+                )
 
     def check_charms_ops_mandatory(self, charm):
         """
@@ -1228,9 +1240,8 @@ class Linter:
     def do_lint(self, parsed_yaml):  # pragma: no cover
         """Lint parsed YAML."""
         # Handle Juju 2 vs Juju 1
-        applications = "applications"
-        if applications not in parsed_yaml:
-            applications = "services"
+        applications = "applications" if "applications" in parsed_yaml else "services"
+        input_file = input_handler(parsed_yaml, applications)
 
         if applications in parsed_yaml:
 
@@ -1251,7 +1262,7 @@ class Linter:
                 self.process_subordinates(parsed_yaml[applications][app], app)
 
             self.check_subs(parsed_yaml["machines"])
-            self.check_relations(parsed_yaml[applications])
+            self.check_relations(input_file)
             self.check_charms()
 
             if "relations" in parsed_yaml:

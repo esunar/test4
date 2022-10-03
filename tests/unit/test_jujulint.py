@@ -1233,22 +1233,35 @@ applications:
         """Test conversion of string values (e.g. 2M (Megabytes)) to integers."""
         assert linter.atoi(input_str) == expected_int
 
-    def test_check_relations_no_rules(self, linter, juju_status, mocker):
+    @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
+    def test_check_relations_no_rules(
+        self, linter, input_files, mocker, input_file_type
+    ):
         """Warn message if rule file doesn't pass relations to check."""
         mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
-        linter.check_relations(juju_status["applications"])
+        linter.check_relations(input_files[input_file_type])
         mock_log.assert_called_with("No relation rules found. Skipping relation checks")
 
-    def test_check_relations(self, linter, juju_status, mocker):
+    @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
+    def test_check_relations(self, linter, input_files, mocker, input_file_type):
         """Ensure that check_relation pass."""
         mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
         linter.lint_rules["relations"] = [
-            {"charm": "ntp", "check": [["ntp:juju-info", "ubuntu:juju-info"]]}
+            {"charm": "nrpe", "check": [["nrpe:juju-info", "ubuntu:juju-info"]]}
         ]
-        linter.check_relations(juju_status["applications"])
+        linter.check_relations(input_files[input_file_type])
         mock_handle_error.assert_not_called()
 
-    def test_check_relations_exception_handling(self, linter, juju_status, mocker):
+    @pytest.mark.parametrize(
+        "input_file_type",
+        [
+            "juju-status",
+            "juju-bundle",
+        ],
+    )
+    def test_check_relations_exception_handling(
+        self, linter, juju_status, mocker, input_file_type, input_files
+    ):
         """Ensure that handle error if relation rules are in wrong format."""
         mock_log = mocker.patch("jujulint.lint.Linter._log_with_header")
         mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
@@ -1260,44 +1273,88 @@ applications:
             "values to unpack (expected 2, got 1)"
         )
         expected_exception = relations.RelationError(expected_msg)
-        linter.check_relations(juju_status["applications"])
+
+        linter.check_relations(input_files[input_file_type])
         mock_handle_error.assert_not_called()
         mock_log.assert_has_calls(
             [mocker.call(expected_exception.message, level=logging.ERROR)]
         )
 
-    def test_check_relations_missing_relations(self, linter, juju_status, mocker):
+    @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
+    def test_check_relations_missing_relations(
+        self, linter, juju_status, mocker, input_file_type, input_files
+    ):
         """Ensure that check_relation handle missing relations."""
         mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
         # add a relation rule that doesn't happen in the model
         linter.lint_rules["relations"] = [
-            {"charm": "ntp", "check": [["ntp:certificates", "ubuntu:certificates"]]}
+            {
+                "charm": "nrpe",
+                "check": [["nrpe-host:local-monitors", "ubuntu:certificates"]],
+            }
         ]
-        linter.check_relations(juju_status["applications"])
+        linter.check_relations(input_files[input_file_type])
         mock_handle_error.assert_called_with(
             {
                 "id": "missing-relations",
                 "tags": ["relation", "missing"],
                 "message": "Endpoint '{}' is missing relations with: {}".format(
-                    "ntp:certificates", ["ubuntu"]
+                    "nrpe:local-monitors", ["ubuntu"]
                 ),
             }
         )
 
-    def test_check_relations_exist(self, linter, juju_status, mocker):
+    @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
+    def test_check_relations_exist(self, linter, input_files, mocker, input_file_type):
         """Ensure that check_relation handle not exist error."""
         mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        not_exist_relation = [
+            "nrpe-host:nrpe-external-master",
+            "elasticsearch:nrpe-external-master",
+        ]
         # add a relation rule that happen in the model
         linter.lint_rules["relations"] = [
-            {"charm": "ntp", "not-exist": [["ntp:juju-info", "ubuntu:juju-info"]]}
+            {"charm": "nrpe", "not-exist": [not_exist_relation]}
         ]
-        linter.check_relations(juju_status["applications"])
+        linter.check_relations(input_files[input_file_type])
         mock_handle_error.assert_called_with(
             {
                 "id": "relation-exist",
                 "tags": ["relation", "exist"],
                 "message": "Relation(s) {} should not exist.".format(
-                    ["ntp:juju-info", "ubuntu:juju-info"]
+                    not_exist_relation
+                ),
+            }
+        )
+
+    @pytest.mark.parametrize("input_file_type", ["juju-status", "juju-bundle"])
+    def test_check_relations_missing_machine(
+        self, linter, input_files, mocker, input_file_type
+    ):
+        """Ensure that check_relation handle missing machines when ubiquitous."""
+        new_machines = {"3": {"series": "focal"}, "2": {"series": "bionic"}}
+        input_file = input_files[input_file_type]
+        # add two new machines
+        input_file.machines_data.update(new_machines)
+        # map file again
+        input_file.map_file()
+        mock_handle_error = mocker.patch("jujulint.lint.Linter.handle_error")
+        linter.lint_rules["relations"] = [
+            {
+                "charm": "nrpe",
+                "ubiquitous": True,
+            }
+        ]
+
+        expected_missing_machines = ["2", "3"]
+        linter.check_relations(input_file)
+        mock_handle_error.assert_called_with(
+            {
+                "id": "missing-machine",
+                "tags": ["missing", "machine"],
+                "message": "Charm '{}' missing on machines: {}".format(
+                    "nrpe",
+                    expected_missing_machines,
                 ),
             }
         )

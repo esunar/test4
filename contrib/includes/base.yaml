@@ -46,7 +46,22 @@ subordinates:
 
 # openstack and k8s should check nrpe relations. See LP#1965762
 relations base check: &relations-base-check
+  # NOTE(gabrielcocenza) filebeat, telegraf, nrpe are necessary until switch to the COS
   - charm: nrpe
     check: [
       ["*:nrpe-external-master", "nrpe:nrpe-external-master"]
     ]
+    # every machine has nrpe unit on it. See LP#1893272
+    ubiquitous: true
+
+  - charm: telegraf
+    ubiquitous: true
+
+  - charm: filebeat
+    ubiquitous: true
+
+  - charm: landscape-client
+    ubiquitous: true
+
+  - charm: ubuntu-advantage
+    ubiquitous: true
