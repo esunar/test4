@@ -14,11 +14,6 @@ openstack config base: &openstack-config-base
   glance:
     ceph-osd-replication-count:
       eq: 3
-  neutron-api:
-    path-mtu:
-      eq: 9000
-    global-physnet-mtu:
-      eq: 9000
   nova-compute:
     cpu-model:
       neq: ""
