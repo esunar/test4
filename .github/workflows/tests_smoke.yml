@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches: [ master ]
-
+  workflow_dispatch:
 jobs:
   lint-unittests-docs:
     name: Lint and Unit tests
