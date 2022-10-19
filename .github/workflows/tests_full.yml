@@ -13,5 +13,8 @@ jobs:
     steps:
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main  
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0        
       - name: Run functional tests
         run: tox -e func
