@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = jujulint
+relative_files = True
+[xml]
+output = coverage.xml

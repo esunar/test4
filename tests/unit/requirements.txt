@@ -3,3 +3,4 @@ pytest-cov
 pytest-html
 pytest-mock
 mock
+coverage
