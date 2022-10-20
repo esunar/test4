@@ -5,6 +5,7 @@ echo -n "pwd: "
 pwd
 ls -al
 echo "Removing previous snap if it exists"
+
 if [[ -e "${snap}.snap" ]];
 then
     rm "${snap}.snap"
